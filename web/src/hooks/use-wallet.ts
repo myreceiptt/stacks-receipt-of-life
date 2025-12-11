@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  connect as stacksConnect,
+  disconnect as stacksDisconnect,
+  getLocalStorage,
+  isConnected,
+} from "@stacks/connect";
 
 type WalletState = {
   address: string | null;
@@ -13,20 +19,59 @@ export function useWallet() {
     isConnecting: false,
   });
 
+  // Hydrate from local storage if the wallet is already connected
+  useEffect(() => {
+    try {
+      if (isConnected()) {
+        const data = getLocalStorage();
+        const stxAddress = data?.addresses?.stx?.[0]?.address ?? null;
+        if (stxAddress) {
+          setState((prev) => ({
+            ...prev,
+            address: stxAddress,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to hydrate wallet state", error);
+    }
+  }, []);
+
   const connect = useCallback(async () => {
-    // TODO: wire this to Stacks Connect
     setState((prev) => ({ ...prev, isConnecting: true }));
 
-    // For now, just simulate a connection with a placeholder address.
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      // If not yet connected, open the wallet selection modal
+      if (!isConnected()) {
+        await stacksConnect({
+          forceWalletSelect: true,
+        });
+      }
 
-    setState({
-      address: "SP_PLACEHOLDER_ADDRESS",
-      isConnecting: false,
-    });
+      // Read addresses from local storage
+      const data = getLocalStorage();
+      const stxAddress = data?.addresses?.stx?.[0]?.address ?? null;
+
+      setState({
+        address: stxAddress,
+        isConnecting: false,
+      });
+    } catch (error) {
+      console.error("Wallet connection failed", error);
+      setState({
+        address: null,
+        isConnecting: false,
+      });
+    }
   }, []);
 
   const disconnect = useCallback(() => {
+    try {
+      stacksDisconnect();
+    } catch (error) {
+      console.error("Wallet disconnect failed", error);
+    }
+
     setState({
       address: null,
       isConnecting: false,
