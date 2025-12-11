@@ -1,6 +1,8 @@
+import { StampReceiptSection } from "@/components/stamp-receipt-section";
+
 export default function HomePage() {
   return (
-    <section className="space-y-6">
+    <section className="space-y-10">
       <div className="space-y-3">
         <p className="text-xs uppercase tracking-[0.25em] text-neutral-600">
           Receipt of life · v0.1
@@ -15,15 +17,7 @@ export default function HomePage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-black bg-white p-4 sm:p-6">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-neutral-600">
-          Coming next
-        </p>
-        <p className="mt-2 text-sm text-neutral-800">
-          This is the landing shell. In the next steps we will connect your
-          Stacks wallet and add the form to stamp your first NOTA.
-        </p>
-      </div>
+      <StampReceiptSection />
     </section>
   );
 }
