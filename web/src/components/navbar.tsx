@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConnectWalletButton } from "@/components/connect-wallet-button";
 
 export function Navbar() {
   return (
@@ -20,11 +21,7 @@ export function Navbar() {
             className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline">
             My Receipts
           </Link>
-          <button
-            className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
-            disabled>
-            Connect wallet
-          </button>
+          <ConnectWalletButton />
         </nav>
       </div>
     </header>
