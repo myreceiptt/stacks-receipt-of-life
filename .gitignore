@@ -1,0 +1,41 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.iml
+
+# Node / JavaScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# Build output (Next.js, etc.)
+dist/
+build/
+.next/
+out/
+.cache/
+coverage/
+
+# Test coverage / reports
+*.lcov
+
+# Deployment / hosting
+.vercel/
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+
+# Clarinet / Stacks settings that may contain mnemonics or private keys
+backend/settings/Devnet.toml
+backend/settings/Testnet.toml
+backend/settings/Mainnet.toml
