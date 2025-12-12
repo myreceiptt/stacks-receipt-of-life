@@ -11,7 +11,8 @@ export function ConnectWalletButton() {
     return (
       <button
         onClick={disconnect}
-        className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white">
+        className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white"
+      >
         {short}
       </button>
     );
@@ -21,7 +22,8 @@ export function ConnectWalletButton() {
     <button
       onClick={connect}
       disabled={isConnecting}
-      className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-60">
+      className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-60"
+    >
       {isConnecting ? "Connecting…" : "Connect wallet"}
     </button>
   );
