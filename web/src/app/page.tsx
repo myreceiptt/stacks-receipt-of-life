@@ -8,7 +8,7 @@ export default function HomePage() {
           Receipt of life · v0.1
         </p>
         <h1 className="max-w-xl text-3xl font-semibold leading-tight sm:text-4xl">
-          Stamp your NOTA on Stacks.
+          Stamp your Receipt on Stacks.
         </h1>
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
           Write one sentence that feels like a receipt for how you live today.

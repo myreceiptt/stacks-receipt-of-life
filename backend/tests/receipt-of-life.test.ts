@@ -11,7 +11,7 @@ const CREATOR_FEE = "1000"; // microSTX
 
 describe("receipt-of-life", () => {
   it("submits a receipt, updates last-id, and stores the entry", () => {
-    const text = "My first NOTA on Stacks";
+    const text = "My first Receipt on Stacks";
 
     // 1) Call the public function
     const tx = simnet.callPublicFn(

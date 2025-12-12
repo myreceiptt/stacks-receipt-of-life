@@ -76,7 +76,7 @@ export function StampReceiptSection() {
       {!address && (
         <div className="rounded-md border border-dashed border-black bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
           Connect your Stacks wallet in the navbar above to mint your first
-          NOTA.
+          receipt.
         </div>
       )}
 

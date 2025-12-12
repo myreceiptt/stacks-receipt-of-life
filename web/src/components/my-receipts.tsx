@@ -62,7 +62,7 @@ export function MyReceipts() {
               My Receipts · on-chain
             </p>
             <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
-              Your NOTA on Stacks.
+              Your Receipt/s on Stacks.
             </h1>
           </div>
 
@@ -137,7 +137,7 @@ export function MyReceipts() {
                 {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
               </span>{" "}
               on this contract, but none were stamped by this wallet yet. Stamp
-              your first NOTA on the home page.
+              your first receipt on the home page.
             </div>
           )}
 

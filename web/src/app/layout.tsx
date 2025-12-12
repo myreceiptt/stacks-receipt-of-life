@@ -6,7 +6,7 @@ import { Footer } from "@/components/footer";
 export const metadata: Metadata = {
   title: "Stacks Receipt of Life",
   description:
-    "Stamp your NOTA – a Receipt of Life – on Stacks with Clarity 4.",
+    "Stamp your Receipt — a Receipt of Life — on Stacks with Clarity 4.",
 };
 
 export default function RootLayout({
