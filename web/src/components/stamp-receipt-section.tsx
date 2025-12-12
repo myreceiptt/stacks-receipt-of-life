@@ -38,18 +38,19 @@ export function StampReceiptSection() {
     setIsSubmitting(true);
     try {
       const response = await submitReceipt(text.trim());
-      if (response.txId) {
-        setTxId(response.txId);
+      if (response.txid) {
+        setTxId(response.txid);
         setText("");
       } else {
         setError("Transaction sent, but response format was unexpected.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(
-        err?.message ??
-          "Failed to submit receipt. Please check the console for details."
-      );
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to submit receipt. Please check the console for details.";
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }

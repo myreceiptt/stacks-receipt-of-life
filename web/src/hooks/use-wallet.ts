@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState, useCallback } from "react";
 import {
   connect as stacksConnect,
   disconnect as stacksDisconnect,
@@ -14,41 +14,38 @@ type WalletState = {
 };
 
 export function useWallet() {
-  const [state, setState] = useState<WalletState>({
-    address: null,
-    isConnecting: false,
-  });
-
-  // Hydrate from local storage if the wallet is already connected
-  useEffect(() => {
+  const [state, setState] = useState<WalletState>(() => {
     try {
       if (isConnected()) {
         const data = getLocalStorage();
         const stxAddress = data?.addresses?.stx?.[0]?.address ?? null;
         if (stxAddress) {
-          setState((prev) => ({
-            ...prev,
+          return {
             address: stxAddress,
-          }));
+            isConnecting: false,
+          };
         }
       }
     } catch (error) {
       console.error("Failed to hydrate wallet state", error);
     }
-  }, []);
+
+    return {
+      address: null,
+      isConnecting: false,
+    };
+  });
 
   const connect = useCallback(async () => {
     setState((prev) => ({ ...prev, isConnecting: true }));
 
     try {
-      // If not yet connected, open the wallet selection modal
       if (!isConnected()) {
         await stacksConnect({
           forceWalletSelect: true,
         });
       }
 
-      // Read addresses from local storage
       const data = getLocalStorage();
       const stxAddress = data?.addresses?.stx?.[0]?.address ?? null;
 
