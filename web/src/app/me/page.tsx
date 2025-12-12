@@ -1,5 +1,5 @@
-import { MyReceipts } from "@/components/my-receipts";
+import MeClientPage from "./MeClientPage";
 
 export default function MePage() {
-  return <MyReceipts />;
+  return <MeClientPage />;
 }

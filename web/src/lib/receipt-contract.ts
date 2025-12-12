@@ -1,6 +1,5 @@
 "use client";
 
-import { request } from "@stacks/connect";
 import {
   Cl,
   cvToJSON,
@@ -8,6 +7,11 @@ import {
   fetchCallReadOnlyFunction,
 } from "@stacks/transactions";
 import { STACKS_TESTNET } from "@stacks/network";
+
+async function loadStacksRequest() {
+  const mod = await import("@stacks/connect");
+  return mod.request;
+}
 
 const CONTRACT_NAME = "receipt-of-life";
 
@@ -36,7 +40,7 @@ function getContractId(): string {
 
 /**
  * WRITE: submit a new Receipt of Life
- * (ini versi yang sudah terbukti sukses)
+ * (pakai stacks-connect secara dinamis)
  */
 export async function submitReceipt(text: string): Promise<StacksTxResponse> {
   const contract = getContractId();
@@ -49,6 +53,8 @@ export async function submitReceipt(text: string): Promise<StacksTxResponse> {
 
   // Clarity value (Stacks Connect will convert to hex)
   const functionArgs = [Cl.stringUtf8(text)];
+
+  const request = await loadStacksRequest();
 
   const response = (await request(
     { forceWalletSelect: false },
