@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { request as stacksRequest } from "@stacks/connect";
 
 type WalletState = {
   address: string | null;
@@ -54,6 +53,8 @@ export function useWallet() {
     setState((prev) => ({ ...prev, isConnecting: true }));
 
     try {
+      const { request: stacksRequest } = await import("@stacks/connect");
+
       const result = await stacksRequest(
         { forceWalletSelect: true },
         "stx_getAccounts"
