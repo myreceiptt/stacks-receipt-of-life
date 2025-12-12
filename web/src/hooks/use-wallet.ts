@@ -53,7 +53,10 @@ export function useWallet() {
     setState((prev) => ({ ...prev, isConnecting: true }));
 
     try {
-      const { request: stacksRequest } = await import("@stacks/connect");
+      const { request: stacksRequest } =
+        typeof window === "undefined"
+          ? await import("../lib/stacks-connect-stub")
+          : await import("@stacks/connect");
 
       const result = await stacksRequest(
         { forceWalletSelect: true },

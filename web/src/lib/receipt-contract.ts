@@ -9,6 +9,10 @@ import {
 import { STACKS_TESTNET } from "@stacks/network";
 
 async function loadStacksRequest() {
+  if (typeof window === "undefined") {
+    const mod = await import("./stacks-connect-stub");
+    return mod.request;
+  }
   const mod = await import("@stacks/connect");
   return mod.request;
 }
