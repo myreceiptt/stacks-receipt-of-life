@@ -21,6 +21,7 @@ export function Navbar() {
             className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline">
             My Receipts
           </Link>
+
           <ConnectWalletButton />
         </nav>
       </div>
