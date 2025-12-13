@@ -47,6 +47,17 @@ export function MyReceipts() {
     loadReceipts();
   }, [address, loadReceipts]);
 
+  // Reset data when disconnecting
+  useEffect(() => {
+    if (!address) {
+      setReceipts([]);
+      setTotalOnChain(null);
+      setError(null);
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [address]);
+
   const handleRefresh = async () => {
     if (!address) return;
     setIsRefreshing(true);

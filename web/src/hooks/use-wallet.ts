@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 type WalletState = {
   address: string | null;
   isConnecting: boolean;
 };
+
+const STORAGE_KEY = "stacks.wallet.address";
 
 function extractFirstAddress(result: unknown): string | null {
   // Unwrap { result: ... } if present
@@ -111,6 +113,11 @@ export function useWallet() {
         address: stxAddress,
         isConnecting: false,
       });
+      try {
+        window.localStorage.setItem(STORAGE_KEY, stxAddress);
+      } catch {
+        // ignore storage errors
+      }
     } catch (error) {
       console.error("Wallet connection failed", error);
       setState({
@@ -121,10 +128,24 @@ export function useWallet() {
   }, []);
 
   const disconnect = useCallback(() => {
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore storage errors
+    }
     setState({
       address: null,
       isConnecting: false,
     });
+  }, []);
+
+  // Hydrate on mount: use cached address only (no wallet prompt)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const cached = window.localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      setState({ address: cached, isConnecting: false });
+    }
   }, []);
 
   return {
