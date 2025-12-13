@@ -9,9 +9,9 @@ import {
 import { STACKS_TESTNET } from "@stacks/network";
 
 async function loadStacksRequest() {
+  // Server should never call wallet; throw early
   if (typeof window === "undefined") {
-    const mod = await import("./stacks-connect-stub");
-    return mod.request;
+    throw new Error("Wallet request attempted on the server.");
   }
   const mod = await import("@stacks/connect");
   return mod.request;
@@ -64,7 +64,7 @@ export async function submitReceipt(text: string): Promise<StacksTxResponse> {
     { forceWalletSelect: false },
     "stx_callContract",
     {
-      contract,
+      contract: contract as `${string}.${string}`,
       functionName: "submit-receipt",
       functionArgs,
       network: "testnet",

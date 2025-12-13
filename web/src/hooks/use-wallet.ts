@@ -50,13 +50,14 @@ export function useWallet() {
   });
 
   const connect = useCallback(async () => {
+    // Client-only: do nothing on server render
+    if (typeof window === "undefined") return;
+
     setState((prev) => ({ ...prev, isConnecting: true }));
 
     try {
-      const { request: stacksRequest } =
-        typeof window === "undefined"
-          ? await import("../lib/stacks-connect-stub")
-          : await import("@stacks/connect");
+      // Always load real client module on demand
+      const { request: stacksRequest } = await import("@stacks/connect");
 
       const result = await stacksRequest(
         { forceWalletSelect: true },
