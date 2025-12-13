@@ -71,6 +71,16 @@ export function StampReceiptSection() {
           <span className="font-medium">receipt-of-life</span> contract on
           Stacks testnet.
         </p>
+        <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
+          Get your $STX faucet on Stacks testnet here:{" "}
+          <a
+            href="https://learnweb3.io/faucets/stacks/?invite-code=lKtTV01s"
+            target="_blank"
+            rel="noreferrer"
+            className="underline">
+            $STX Faucet
+          </a>
+        </p>
       </div>
 
       {!address && (

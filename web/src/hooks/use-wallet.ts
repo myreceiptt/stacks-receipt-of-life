@@ -8,26 +8,16 @@ type WalletState = {
 };
 
 function extractFirstAddress(result: unknown): string | null {
-  if (Array.isArray(result) && result.length > 0) {
-    const first = result[0];
-    if (typeof first === "string") return first;
-    if (typeof first === "object" && first !== null) {
-      const obj = first as Record<string, unknown>;
-      return (
-        (obj as { address?: string })?.address ??
-        (obj as { stxAddress?: string })?.stxAddress ??
-        (obj as { addresses?: { stx?: Array<{ address?: string }> } })?.addresses
-          ?.stx?.[0]?.address ??
-        (obj as { address?: { testnet?: string; mainnet?: string } })?.address
-          ?.testnet ??
-        (obj as { address?: { testnet?: string; mainnet?: string } })?.address
-          ?.mainnet ??
-        null
-      );
-    }
-  }
-  if (typeof result === "object" && result !== null) {
-    const obj = result as Record<string, unknown>;
+  // Unwrap { result: ... } if present
+  const payload =
+    result &&
+    typeof result === "object" &&
+    "result" in (result as Record<string, unknown>)
+      ? (result as Record<string, unknown>).result
+      : result;
+
+  const pick = (obj: Record<string, unknown> | null): string | null => {
+    if (!obj) return null;
     return (
       (obj as { address?: string })?.address ??
       (obj as { stxAddress?: string })?.stxAddress ??
@@ -39,6 +29,28 @@ function extractFirstAddress(result: unknown): string | null {
         ?.mainnet ??
       null
     );
+  };
+
+  if (Array.isArray(payload) && payload.length > 0) {
+    const first = payload[0];
+    if (typeof first === "string") return first;
+    if (typeof first === "object" && first !== null) {
+      return pick(first as Record<string, unknown>);
+    }
+  }
+  if (typeof payload === "object" && payload !== null) {
+    return pick(payload as Record<string, unknown>);
+  }
+  return null;
+}
+
+function pickSupportedMethod(
+  supported: unknown,
+  preferred: string[]
+): string | null {
+  if (!Array.isArray(supported)) return null;
+  for (const method of preferred) {
+    if (supported.includes(method)) return method;
   }
   return null;
 }
@@ -59,26 +71,28 @@ export function useWallet() {
       // Always load real client module on demand
       const { request: stacksRequest } = await import("@stacks/connect");
 
-      let result: unknown;
-
+      // Discover supported methods if wallet exposes them
+      let supported: unknown = null;
       try {
-        result = await stacksRequest(
-          { forceWalletSelect: true },
-          "stx_getAccounts"
+        supported = await stacksRequest(
+          { forceWalletSelect: false },
+          "getAddresses"
         );
       } catch {
-        try {
-          result = await stacksRequest(
-            { forceWalletSelect: true },
-            "stx_getAddresses"
-          );
-        } catch {
-          result = await stacksRequest(
-            { forceWalletSelect: true },
-            "getAddresses"
-          );
-        }
+        // ignore; we'll fall back to method list
       }
+
+      const preferred = ["getAddresses", "stx_getAddresses", "stx_getAccounts"];
+      // If supported was a method list, use it; if it's an address payload, leave method as default
+      const method =
+        (Array.isArray(supported) &&
+          pickSupportedMethod(supported, preferred)) ||
+        preferred[0];
+
+      const result = await stacksRequest(
+        { forceWalletSelect: true },
+        method as "getAddresses"
+      );
 
       const stxAddress = extractFirstAddress(result);
       if (!stxAddress) {
