@@ -59,10 +59,26 @@ export function useWallet() {
       // Always load real client module on demand
       const { request: stacksRequest } = await import("@stacks/connect");
 
-      const result = await stacksRequest(
-        { forceWalletSelect: true },
-        "stx_getAccounts"
-      );
+      let result: unknown;
+
+      try {
+        result = await stacksRequest(
+          { forceWalletSelect: true },
+          "stx_getAccounts"
+        );
+      } catch {
+        try {
+          result = await stacksRequest(
+            { forceWalletSelect: true },
+            "stx_getAddresses"
+          );
+        } catch {
+          result = await stacksRequest(
+            { forceWalletSelect: true },
+            "getAddresses"
+          );
+        }
+      }
 
       const stxAddress = extractFirstAddress(result);
       if (!stxAddress) {
