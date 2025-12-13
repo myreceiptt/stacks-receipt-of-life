@@ -1,0 +1,18 @@
+---
+id: 0
+name: Mainnet deployment
+network: mainnet
+stacks-node: "https://api.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoin.blockstack.com:8332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-publish:
+            contract-name: receipt-of-life
+            expected-sender: SP29ECHHQ6F9344SGGGRGDPTPFPTXA3GHXK28KCWH
+            cost: 60100
+            path: contracts/receipt-of-life.clar
+            anchor-block-only: true
+            clarity-version: 4
+      epoch: "3.3"
