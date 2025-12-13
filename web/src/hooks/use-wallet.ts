@@ -31,6 +31,26 @@ function extractFirstAddress(result: unknown): string | null {
     );
   };
 
+  // If payload has top-level addresses array (e.g., [{ address, symbol: "STX" }])
+  if (
+    payload &&
+    typeof payload === "object" &&
+    Array.isArray((payload as { addresses?: unknown }).addresses)
+  ) {
+    const addrArray = (payload as { addresses?: Array<Record<string, unknown>> })
+      .addresses;
+    const stxEntry =
+      addrArray?.find((item) => item?.symbol === "STX" && item.address) ??
+      addrArray?.[0];
+    if (stxEntry && typeof stxEntry === "object") {
+      const addr = pick(stxEntry as Record<string, unknown>);
+      if (addr) return addr;
+      if ("address" in stxEntry && typeof stxEntry.address === "string") {
+        return stxEntry.address;
+      }
+    }
+  }
+
   if (Array.isArray(payload) && payload.length > 0) {
     const first = payload[0];
     if (typeof first === "string") return first;
@@ -40,17 +60,6 @@ function extractFirstAddress(result: unknown): string | null {
   }
   if (typeof payload === "object" && payload !== null) {
     return pick(payload as Record<string, unknown>);
-  }
-  return null;
-}
-
-function pickSupportedMethod(
-  supported: unknown,
-  preferred: string[]
-): string | null {
-  if (!Array.isArray(supported)) return null;
-  for (const method of preferred) {
-    if (supported.includes(method)) return method;
   }
   return null;
 }
@@ -71,28 +80,27 @@ export function useWallet() {
       // Always load real client module on demand
       const { request: stacksRequest } = await import("@stacks/connect");
 
-      // Discover supported methods if wallet exposes them
-      let supported: unknown = null;
-      try {
-        supported = await stacksRequest(
-          { forceWalletSelect: false },
-          "getAddresses"
-        );
-      } catch {
-        // ignore; we'll fall back to method list
+      const preferred = ["getAddresses", "stx_getAddresses", "stx_getAccounts"];
+      let lastError: unknown = null;
+      let result: unknown = null;
+
+      for (let i = 0; i < preferred.length; i++) {
+        const method = preferred[i];
+        try {
+          result = await stacksRequest(
+            { forceWalletSelect: i === 0 }, // only prompt once
+            method as "getAddresses"
+          );
+          break;
+        } catch (err) {
+          lastError = err;
+          // try next method
+        }
       }
 
-      const preferred = ["getAddresses", "stx_getAddresses", "stx_getAccounts"];
-      // If supported was a method list, use it; if it's an address payload, leave method as default
-      const method =
-        (Array.isArray(supported) &&
-          pickSupportedMethod(supported, preferred)) ||
-        preferred[0];
-
-      const result = await stacksRequest(
-        { forceWalletSelect: true },
-        method as "getAddresses"
-      );
+      if (result === null) {
+        throw lastError ?? new Error("Wallet did not return any addresses.");
+      }
 
       const stxAddress = extractFirstAddress(result);
       if (!stxAddress) {
