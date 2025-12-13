@@ -105,7 +105,7 @@ export function StampReceiptSection() {
             className="w-full resize-none border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
             placeholder="I am living like someone who..."
           />
-          <div className="flex items-center justify-between text-[11px] text-neutral-600">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
             <span>
               {address
                 ? "This will be stored on-chain and linked to your STX address."

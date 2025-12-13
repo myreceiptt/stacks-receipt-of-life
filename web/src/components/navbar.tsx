@@ -1,12 +1,19 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 
 export function Navbar() {
   return (
     <header className="border-b border-black bg-white">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <Link href="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full border border-black" />
+          <Image
+            src="/icon.png"
+            alt="logo"
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-full border border-black object-cover"
+          />
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold uppercase tracking-[0.2em]">
               $MyReceipt
@@ -15,7 +22,7 @@ export function Navbar() {
           </div>
         </Link>
 
-        <nav className="flex items-center gap-4">
+        <nav className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
           <Link
             href="/me"
             className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline">

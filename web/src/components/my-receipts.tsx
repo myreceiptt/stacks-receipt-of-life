@@ -175,11 +175,11 @@ export function MyReceipts() {
                         {date.toLocaleString()}
                       </span>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap text-neutral-900">
+                    <p className="mt-2 whitespace-pre-wrap break-words text-neutral-900">
                       {r.text}
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-neutral-600">
-                      <span className="font-mono">
+                      <span className="font-mono break-words">
                         Owner: {r.owner.slice(0, 10)}…
                       </span>
                       <a

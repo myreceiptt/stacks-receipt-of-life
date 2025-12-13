@@ -9,14 +9,14 @@ export function ConnectWalletButton() {
     const short = `${address.slice(0, 6)}…${address.slice(-4)}`;
 
     return (
-      <button
-        onClick={disconnect}
-        className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white"
-      >
-        {short}
-      </button>
-    );
-  }
+    <button
+      onClick={disconnect}
+      className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white"
+    >
+      {short}
+    </button>
+  );
+}
 
   return (
     <button
