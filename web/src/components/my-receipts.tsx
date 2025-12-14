@@ -5,18 +5,22 @@ import { useWallet } from "@/hooks/use-wallet";
 import {
   getReceiptsByOwner,
   getLastId,
+  getReceiptsByCreator,
   type Receipt,
 } from "@/lib/receipt-contract";
 
 export function MyReceipts() {
   const { address } = useWallet();
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [ownedReceipts, setOwnedReceipts] = useState<Receipt[]>([]);
+  const [createdReceipts, setCreatedReceipts] = useState<Receipt[]>([]);
   const [totalOnChain, setTotalOnChain] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"owned" | "created">("owned");
 
-  const hasReceipts = receipts.length > 0;
+  const hasOwned = ownedReceipts.length > 0;
+  const hasCreated = createdReceipts.length > 0;
   const hasTotal = typeof totalOnChain === "number" && totalOnChain > 0;
 
   const loadReceipts = useCallback(async () => {
@@ -26,13 +30,15 @@ export function MyReceipts() {
     setError(null);
 
     try {
-      const [total, list] = await Promise.all([
+      const [total, owned, created] = await Promise.all([
         getLastId(),
         getReceiptsByOwner(address),
+        getReceiptsByCreator(address),
       ]);
 
       setTotalOnChain(total);
-      setReceipts(list);
+      setOwnedReceipts(owned);
+      setCreatedReceipts(created);
     } catch (err) {
       console.error(err);
       setError("Failed to load receipts from Stacks mainnet.");
@@ -50,7 +56,8 @@ export function MyReceipts() {
   // Reset data when disconnecting
   useEffect(() => {
     if (!address) {
-      setReceipts([]);
+      setOwnedReceipts([]);
+      setCreatedReceipts([]);
       setTotalOnChain(null);
       setError(null);
       setIsLoading(false);
@@ -86,38 +93,45 @@ export function MyReceipts() {
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={!address || isLoading}
-              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40">
-              {isRefreshing || isLoading ? "Refreshing…" : "Refresh"}
-            </button>
-          </div>
+      disabled={!address || isLoading}
+      className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40">
+      {isRefreshing || isLoading ? "Refreshing…" : "Refresh"}
+    </button>
+  </div>
         </div>
 
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
           This page shows your on-chain Receipts of Life stamped with the
-          connected Stacks wallet on mainnet. Each receipt is a small proof
-          that you were paying attention to your own life.
+          connected Stacks wallet on mainnet. You can see NOTAs you own and
+          NOTAs you created. Each receipt is a small proof that you were paying
+          attention to your own life.
         </p>
 
         {address && (
-          <div className="flex flex-wrap items-center gap-2 text-[11px] text-neutral-600">
-            {hasReceipts && (
-              <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
-                You · {receipts.length} receipt
-                {receipts.length > 1 ? "s" : ""}
-              </span>
-            )}
-            {hasTotal && (
-              <span className="rounded-full border border-dashed border-neutral-500 bg-neutral-50 px-2 py-1">
-                Contract · {totalOnChain} stamped so far
-              </span>
-            )}
-            {!hasTotal && !isLoading && (
-              <span className="rounded-full border border-dashed border-neutral-500 bg-neutral-50 px-2 py-1">
-                Contract is still empty on mainnet.
-              </span>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-neutral-600">
+          {hasOwned && (
+            <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
+              Owned · {ownedReceipts.length} receipt
+              {ownedReceipts.length > 1 ? "s" : ""}
+            </span>
+          )}
+          {hasCreated && (
+            <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
+              Created · {createdReceipts.length} receipt
+              {createdReceipts.length > 1 ? "s" : ""}
+            </span>
+          )}
+          {hasTotal && (
+            <span className="rounded-full border border-dashed border-neutral-500 bg-neutral-50 px-2 py-1">
+              Contract · {totalOnChain} stamped so far
+            </span>
+          )}
+          {!hasTotal && !isLoading && (
+            <span className="rounded-full border border-dashed border-neutral-500 bg-neutral-50 px-2 py-1">
+              Contract is still empty on mainnet.
+            </span>
+          )}
+        </div>
         )}
       </header>
 
@@ -129,6 +143,29 @@ export function MyReceipts() {
 
       {address && (
         <div className="space-y-4">
+          <div className="flex flex-wrap gap-2 text-[11px]">
+            <button
+              type="button"
+              onClick={() => setActiveTab("owned")}
+              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
+                activeTab === "owned"
+                  ? "border-black bg-black text-white"
+                  : "border-black bg-white"
+              }`}>
+              Owned
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("created")}
+              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
+                activeTab === "created"
+                  ? "border-black bg-black text-white"
+                  : "border-black bg-white"
+              }`}>
+              Created
+            </button>
+          </div>
+
           {isLoading && (
             <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
               Loading receipts from Stacks mainnet…
@@ -141,27 +178,38 @@ export function MyReceipts() {
             </div>
           )}
 
-          {!isLoading && !error && !hasReceipts && hasTotal && (
+          {!isLoading && !error && activeTab === "owned" && !hasOwned && hasTotal && (
             <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
               There are{" "}
               <span className="font-mono">
                 {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
               </span>{" "}
-              on this contract, but none were stamped by this wallet yet. Stamp
+              on this contract, but none are owned by this wallet yet. Stamp
               your first receipt on the home page.
             </div>
           )}
 
-          {!isLoading && !error && !hasReceipts && !hasTotal && (
+          {!isLoading && !error && activeTab === "created" && !hasCreated && hasTotal && (
+            <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
+              There are{" "}
+              <span className="font-mono">
+                {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
+              </span>{" "}
+              on this contract, but none were created by this wallet yet. Stamp
+              your first receipt on the home page.
+            </div>
+          )}
+
+          {!isLoading && !error && !hasTotal && (
             <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
               No receipts exist on this contract yet. Be the first one to stamp
               a Receipt of Life on the home page.
             </div>
           )}
 
-          {!isLoading && !error && hasReceipts && (
+          {!isLoading && !error && activeTab === "owned" && hasOwned && (
             <ul className="space-y-3">
-              {receipts.map((r) => {
+              {ownedReceipts.map((r) => {
                 const date = new Date(r.createdAt * 1000);
                 return (
                   <li
@@ -178,16 +226,95 @@ export function MyReceipts() {
                     <p className="mt-2 whitespace-pre-wrap break-words text-neutral-900">
                       {r.text}
                     </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-neutral-600">
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
                       <span className="font-mono break-words">
-                        Owner: {r.owner.slice(0, 10)}…
+                        Creator: {r.creator.slice(0, 8)}…{r.creator.slice(-4)}
+                      </span>
+                      <a
+                        href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline">
+                        View creator
+                      </a>
+                      <span className="font-mono break-words">
+                        Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
                       </span>
                       <a
                         href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
                         target="_blank"
                         rel="noreferrer"
                         className="underline">
-                        View address
+                        View owner
+                      </a>
+                      <span className="font-mono break-words">
+                        Royalty to: {r.royaltyRecipient.slice(0, 8)}…
+                        {r.royaltyRecipient.slice(-4)}
+                      </span>
+                      <a
+                        href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline">
+                        View royalty
+                      </a>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {!isLoading && !error && activeTab === "created" && hasCreated && (
+            <ul className="space-y-3">
+              {createdReceipts.map((r) => {
+                const date = new Date(r.createdAt * 1000);
+                return (
+                  <li
+                    key={r.id}
+                    className="rounded-xl border border-black bg-white p-4 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">
+                        Receipt #{r.id}
+                      </span>
+                      <span className="text-[11px] text-neutral-500">
+                        {date.toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-neutral-900">
+                      {r.text}
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
+                      <span className="font-mono break-words">
+                        Creator: {r.creator.slice(0, 8)}…{r.creator.slice(-4)}
+                      </span>
+                      <a
+                        href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline">
+                        View creator
+                      </a>
+                      <span className="font-mono break-words">
+                        Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
+                      </span>
+                      <a
+                        href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline">
+                        View owner
+                      </a>
+                      <span className="font-mono break-words">
+                        Royalty to: {r.royaltyRecipient.slice(0, 8)}…
+                        {r.royaltyRecipient.slice(-4)}
+                      </span>
+                      <a
+                        href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline">
+                        View royalty
                       </a>
                     </div>
                   </li>
