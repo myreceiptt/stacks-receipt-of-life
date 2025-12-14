@@ -9,6 +9,11 @@ requirements = []
 path = 'contracts/receipt-of-life.clar'
 clarity_version = 4
 epoch = 'latest'
+
+[contracts.receipt-of-life-v2]
+path = 'contracts/receipt-of-life-v2.clar'
+clarity_version = 4
+epoch = 'latest'
 [repl.analysis]
 passes = ['check_checker']
 
