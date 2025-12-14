@@ -6,7 +6,7 @@ import {
   type ClarityValue,
   fetchCallReadOnlyFunction,
 } from "@stacks/transactions";
-import { STACKS_TESTNET } from "@stacks/network";
+import { STACKS_MAINNET } from "@stacks/network";
 
 async function loadStacksRequest() {
   // Server should never call wallet; throw early
@@ -51,7 +51,7 @@ export async function submitReceipt(text: string): Promise<StacksTxResponse> {
 
   if (!contract) {
     throw new Error(
-      "Contract address is not configured yet. Set NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS in .env.local after deploying the contract to testnet."
+      "Contract address is not configured yet. Set NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS in .env.local after deploying the contract to Stacks mainnet."
     );
   }
 
@@ -67,7 +67,7 @@ export async function submitReceipt(text: string): Promise<StacksTxResponse> {
       contract: contract as `${string}.${string}`,
       functionName: "submit-receipt",
       functionArgs,
-      network: "testnet",
+      network: "mainnet",
       // Allow STX movement without explicit post-conditions (MVP mode)
       postConditionMode: "allow",
     }
@@ -95,7 +95,7 @@ function extractValueString(field: unknown): string | undefined {
 async function readOnlyCall(
   functionName: string,
   functionArgs: ClarityValue[] = [],
-  senderAddress?: string
+    senderAddress?: string
 ): Promise<unknown> {
   const contractAddress = getContractAddressOnly();
   if (!contractAddress) {
@@ -110,7 +110,7 @@ async function readOnlyCall(
     functionName,
     functionArgs,
     senderAddress: senderAddress ?? contractAddress,
-    network: STACKS_TESTNET, // pastikan benar-benar ke testnet
+    network: STACKS_MAINNET,
   });
 
   return cvToJSON(cv);

@@ -35,7 +35,7 @@ export function MyReceipts() {
       setReceipts(list);
     } catch (err) {
       console.error(err);
-      setError("Failed to load receipts from Stacks testnet.");
+      setError("Failed to load receipts from Stacks mainnet.");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -95,8 +95,8 @@ export function MyReceipts() {
 
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
           This page shows your on-chain Receipts of Life stamped with the
-          connected Stacks wallet on testnet. Each receipt is a small proof that
-          you were paying attention to your own life.
+          connected Stacks wallet on mainnet. Each receipt is a small proof
+          that you were paying attention to your own life.
         </p>
 
         {address && (
@@ -114,7 +114,7 @@ export function MyReceipts() {
             )}
             {!hasTotal && !isLoading && (
               <span className="rounded-full border border-dashed border-neutral-500 bg-neutral-50 px-2 py-1">
-                Contract is still empty on testnet.
+                Contract is still empty on mainnet.
               </span>
             )}
           </div>
@@ -131,7 +131,7 @@ export function MyReceipts() {
         <div className="space-y-4">
           {isLoading && (
             <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
-              Loading receipts from Stacks testnet…
+              Loading receipts from Stacks mainnet…
             </div>
           )}
 
@@ -183,7 +183,7 @@ export function MyReceipts() {
                         Owner: {r.owner.slice(0, 10)}…
                       </span>
                       <a
-                        href={`https://explorer.stacks.co/address/${r.owner}?chain=testnet`}
+                        href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
                         target="_blank"
                         rel="noreferrer"
                         className="underline">

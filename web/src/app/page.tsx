@@ -12,8 +12,6 @@ export default function HomePage() {
         </h1>
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
           Write one sentence that feels like a receipt for how you live today.
-          Soon, you&apos;ll be able to mint it as an on-chain Receipt of Life
-          secured by Bitcoin via Stacks.
         </p>
       </div>
 

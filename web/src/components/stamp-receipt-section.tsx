@@ -57,7 +57,7 @@ export function StampReceiptSection() {
   };
 
   const explorerUrl =
-    txId && `https://explorer.stacks.co/txid/${txId}?chain=testnet`;
+    txId && `https://explorer.stacks.co/txid/${txId}?chain=mainnet`;
 
   return (
     <section className="space-y-4">
@@ -66,20 +66,10 @@ export function StampReceiptSection() {
           Stamp a receipt
         </p>
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
-          Write one sentence that feels like a Receipt of Life for today. When
-          you stamp it, we&apos;ll submit a transaction to the{" "}
-          <span className="font-medium">receipt-of-life</span> contract on
-          Stacks testnet.
-        </p>
-        <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
-          Get your $STX faucet on Stacks testnet here:{" "}
-          <a
-            href="https://learnweb3.io/faucets/stacks/?invite-code=lKtTV01s"
-            target="_blank"
-            rel="noreferrer"
-            className="underline">
-            $STX Faucet
-          </a>
+          Write a Receipt of Life for today. When you stamp it, we&apos;ll
+          submit a transaction to the{" "}
+          <span className="font-medium">receipt-of-life</span> contract secured
+          by Bitcoin via Stacks mainnet.
         </p>
       </div>
 
