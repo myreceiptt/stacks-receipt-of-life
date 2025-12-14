@@ -1,7 +1,43 @@
-;; Stacks Receipt of Life v2.0.0 (skeleton, same behavior as v1.2.34)
-;; Clarity 4 contract
-;; STAMP-FEE is paid to TREASURY on submit (submit-receipt / submit-receipt-for).
-;; ROYALTY-FEE is paid to the current royalty-recipient on transfer-receipt.
+;; ============================================================================
+;; Stacks Receipt of Life v2.0.0
+;; On-chain "Receipt of Life" with creator, owner, royalty-recipient, STAMP/ROYALTY
+;; fees, paging, and global stats. Superset of v1 (receipt-of-life) with:
+;; - Fee safety: skips STX self-transfers (fee = 0 or sender == recipient) so
+;;   admin/royalty users don't hit self-transfer failures.
+;; - Paging & filtered views: get-receipts-range, and filtered by owner/creator/
+;;   royalty-recipient.
+;; - Global stats counters for submissions, transfers, and fees actually applied.
+;;
+;; Economic model
+;; - STAMP-FEE (data-var):
+;;   * Charged tx-sender -> TREASURY on submit-receipt / submit-receipt-for.
+;;   * Skipped when STAMP-FEE == u0 OR tx-sender == TREASURY (self-transfer).
+;;   * total-stamp-fee increments only when the fee branch runs.
+;; - ROYALTY-FEE (data-var):
+;;   * Charged tx-sender (current owner) -> royalty-recipient on transfer-receipt.
+;;   * Skipped when ROYALTY-FEE == u0 OR tx-sender == royalty-recipient.
+;;   * total-royalty-fee increments only when the fee branch runs.
+;; - Creator can update royalty-recipient via set-receipt-royalty-recipient.
+;; - Admin (admin data-var) can call set-fees and set-admin.
+;;
+;; Public API (write):
+;; - submit-receipt(text)
+;; - submit-receipt-for(text, recipient)
+;; - transfer-receipt(id, new-owner)
+;; - set-receipt-royalty-recipient(id, new-recipient)
+;; - set-fees(new-stamp-fee, new-royalty-fee)
+;; - set-admin(new-admin)
+;; Public API (read-only):
+;; - get-receipt(id)
+;; - get-receipts-range(start-id, limit)
+;; - get-receipts-by-owner(owner, start-id, limit)
+;; - get-receipts-by-creator(creator, start-id, limit)
+;; - get-receipts-by-royalty-recipient(recipient, start-id, limit)
+;; - get-last-id()
+;; - get-version()
+;; - get-config()
+;; - get-stats()
+;; ============================================================================
 
 (define-constant VERSION-MAJOR u2)
 (define-constant VERSION-MINOR u0)
@@ -72,12 +108,19 @@
   (let (
         (new-id (+ (var-get last-id) u1))
         (now    stacks-block-time)
+       (stamp-fee (var-get STAMP-FEE))
+        (stamp-fee-applies (and (> stamp-fee u0) (not (is-eq tx-sender TREASURY))))
        )
     (begin
       ;; fee must succeed before any state change
-      (try! (stx-transfer? (var-get STAMP-FEE) tx-sender TREASURY))
+      (unwrap-panic
+        (if stamp-fee-applies
+            (begin
+              (try! (stx-transfer? stamp-fee tx-sender TREASURY))
+              (var-set total-stamp-fee (+ (var-get total-stamp-fee) stamp-fee))
+              (ok true))
+            (ok true)))
       (var-set total-submissions (+ (var-get total-submissions) u1))
-      (var-set total-stamp-fee (+ (var-get total-stamp-fee) (var-get STAMP-FEE)))
       (var-set last-id new-id)
       (map-insert receipts
         { id: new-id }
@@ -117,14 +160,20 @@
               (receipt (unwrap! entry ERR-NOT-FOUND))
               (current-owner (get owner receipt))
               (royalty-to (get royalty-recipient receipt))
+              (royalty-fee (var-get ROYALTY-FEE))
+              (royalty-applies (and (> royalty-fee u0) (not (is-eq tx-sender royalty-to))))
              )
           (if (not (is-eq tx-sender current-owner))
               ERR-NOT-OWNER
               (begin
-                ;; royalty must succeed before state change
-                (try! (stx-transfer? (var-get ROYALTY-FEE) tx-sender royalty-to))
+                (unwrap-panic
+                  (if royalty-applies
+                      (begin
+                        (try! (stx-transfer? royalty-fee tx-sender royalty-to))
+                        (var-set total-royalty-fee (+ (var-get total-royalty-fee) royalty-fee))
+                        (ok true))
+                      (ok true)))
                 (var-set total-transfers (+ (var-get total-transfers) u1))
-                (var-set total-royalty-fee (+ (var-get total-royalty-fee) (var-get ROYALTY-FEE)))
                 (map-set receipts { id: id }
                   {
                     creator: (get creator receipt),
@@ -141,8 +190,7 @@
                     to: new-owner,
                     royalty-to: royalty-to
                   })
-                (ok id)
-              ))))))
+                (ok id)))))))
 
 ;; Public: creator-only change of royalty recipient for a receipt
 (define-public (set-receipt-royalty-recipient (id uint) (new-recipient principal))
