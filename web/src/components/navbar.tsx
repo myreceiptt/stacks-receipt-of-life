@@ -1,8 +1,14 @@
+"use client";
 import Link from "next/link";
 import Image from "next/image";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
+import { useWallet } from "@/hooks/use-wallet";
 
 export function Navbar() {
+  const { address } = useWallet();
+  const adminAddress = process.env.NEXT_PUBLIC_RECEIPT_ADMIN_ADDRESS ?? "";
+  const isAdmin = !!address && !!adminAddress && address === adminAddress;
+
   return (
     <header className="border-b border-black bg-white">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -28,6 +34,13 @@ export function Navbar() {
             className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline">
             My Receipts
           </Link>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline">
+              Admin
+            </Link>
+          )}
           <ConnectWalletButton />
         </nav>
       </div>
