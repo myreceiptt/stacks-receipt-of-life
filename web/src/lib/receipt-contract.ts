@@ -25,7 +25,9 @@ type StacksTxResponse = {
 
 export type Receipt = {
   id: number;
+  creator: string;
   owner: string;
+  royaltyRecipient: string;
   text: string;
   createdAt: number; // unix seconds from stacks-block-time
 };
@@ -87,6 +89,21 @@ function extractValueString(field: unknown): string | undefined {
   if (!isRecord(field)) return undefined;
   const v = field["value"];
   return typeof v === "string" ? v : undefined;
+}
+
+function extractPrincipal(tuple: Record<string, unknown>, key: string) {
+  return extractValueString(tuple[key]);
+}
+
+function extractText(tuple: Record<string, unknown>) {
+  return extractValueString(tuple["text"]);
+}
+
+function extractCreatedAt(tuple: Record<string, unknown>): number | null {
+  const createdRaw = extractValueString(tuple["created-at"]);
+  if (!createdRaw) return null;
+  const parsed = Number(createdRaw);
+  return Number.isNaN(parsed) ? null : parsed;
 }
 
 /**
@@ -160,18 +177,22 @@ export async function getLastId(): Promise<number> {
 function findReceiptTuple(node: unknown): Record<string, unknown> | null {
   if (!isRecord(node)) return null;
 
+  const hasAllFields = (obj: Record<string, unknown>) =>
+    "creator" in obj &&
+    "owner" in obj &&
+    "royalty-recipient" in obj &&
+    "text" in obj &&
+    "created-at" in obj;
+
   // Kalau node ini wrapper tuple: { type: "tuple", value: { ... } }
   const typeField = node["type"];
   const valueField = node["value"];
-  if (typeField === "tuple" && isRecord(valueField)) {
-    const tuple = valueField;
-    if ("owner" in tuple && "text" in tuple && "created-at" in tuple) {
-      return tuple;
-    }
+  if (typeField === "tuple" && isRecord(valueField) && hasAllFields(valueField)) {
+    return valueField;
   }
 
-  // Kalau node ini sendiri sudah punya 3 field tersebut
-  if ("owner" in node && "text" in node && "created-at" in node) {
+  // Kalau node ini sendiri sudah punya semua field
+  if (hasAllFields(node)) {
     return node;
   }
 
@@ -201,23 +222,22 @@ export async function getReceipt(
     return null;
   }
 
-  const owner = extractValueString(tuple["owner"]);
-  const text = extractValueString(tuple["text"]);
-  const createdRaw = extractValueString(tuple["created-at"]);
+  const creator = extractPrincipal(tuple, "creator");
+  const owner = extractPrincipal(tuple, "owner");
+  const royaltyRecipient = extractPrincipal(tuple, "royalty-recipient");
+  const text = extractText(tuple);
+  const createdAt = extractCreatedAt(tuple);
 
-  if (!owner || !text || !createdRaw) {
+  if (!creator || !owner || !royaltyRecipient || !text || createdAt === null) {
     console.warn("Unexpected receipt tuple JSON", raw);
-    return null;
-  }
-
-  const createdAt = Number(createdRaw);
-  if (Number.isNaN(createdAt)) {
     return null;
   }
 
   return {
     id,
+    creator,
     owner,
+    royaltyRecipient,
     text,
     createdAt,
   };
@@ -247,4 +267,129 @@ export async function getReceiptsByOwner(
 
   // Newest first
   return receipts.sort((a, b) => b.id - a.id);
+}
+
+/**
+ * READ: scan all receipts and filter by creator
+ */
+export async function getReceiptsByCreator(
+  creatorAddress: string
+): Promise<Receipt[]> {
+  const lastId = await getLastId();
+  if (!lastId || lastId <= 0) return [];
+
+  const receipts: Receipt[] = [];
+
+  for (let id = 1; id <= lastId; id++) {
+    try {
+      const receipt = await getReceipt(id, creatorAddress);
+      if (receipt && receipt.creator === creatorAddress) {
+        receipts.push(receipt);
+      }
+    } catch (error) {
+      console.error("Failed to read receipt", id, error);
+    }
+  }
+
+  // Newest first
+  return receipts.sort((a, b) => b.id - a.id);
+}
+
+/**
+ * WRITE: gift a receipt to another address
+ */
+export async function submitReceiptFor(
+  text: string,
+  recipient: string
+): Promise<StacksTxResponse> {
+  const contract = getContractId();
+
+  if (!contract) {
+    throw new Error(
+      "Contract address is not configured yet. Set NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS in .env.local after deploying the contract to Stacks mainnet."
+    );
+  }
+
+  const functionArgs = [Cl.stringUtf8(text), Cl.principal(recipient)];
+  const request = await loadStacksRequest();
+
+  const response = (await request(
+    { forceWalletSelect: false },
+    "stx_callContract",
+    {
+      contract: contract as `${string}.${string}`,
+      functionName: "submit-receipt-for",
+      functionArgs,
+      network: "mainnet",
+      postConditionMode: "allow",
+    }
+  )) as StacksTxResponse;
+
+  return response;
+}
+
+/**
+ * WRITE: transfer a receipt to a new owner
+ */
+export async function transferReceipt(
+  id: number,
+  newOwner: string
+): Promise<StacksTxResponse> {
+  const contract = getContractId();
+
+  if (!contract) {
+    throw new Error(
+      "Contract address is not configured yet. Set NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS in .env.local after deploying the contract to Stacks mainnet."
+    );
+  }
+
+  const functionArgs = [Cl.uint(id), Cl.principal(newOwner)];
+  const request = await loadStacksRequest();
+
+  const response = (await request(
+    { forceWalletSelect: false },
+    "stx_callContract",
+    {
+      contract: contract as `${string}.${string}`,
+      functionName: "transfer-receipt",
+      functionArgs,
+      network: "mainnet",
+      postConditionMode: "allow",
+    }
+  )) as StacksTxResponse;
+
+  return response;
+}
+
+/**
+ * WRITE: creator-only change royalty recipient
+ */
+export async function setReceiptRoyaltyRecipient(
+  id: number,
+  newRecipient: string
+): Promise<StacksTxResponse> {
+  const contract = getContractId();
+
+  if (!contract) {
+    throw new Error(
+      "Contract address is not configured yet. Set NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS in .env.local after deploying the contract to Stacks mainnet."
+    );
+  }
+
+  const functionArgs = [Cl.uint(id), Cl.principal(newRecipient)];
+  const request = await loadStacksRequest();
+
+  const response = (await request(
+    { forceWalletSelect: false },
+    "stx_callContract",
+    {
+      contract: contract as `${string}.${string}`,
+      functionName: "set-receipt-royalty-recipient",
+      functionArgs,
+      network: "mainnet",
+      postConditionMode: "allow",
+    }
+  )) as StacksTxResponse;
+
+  return response;
 }
