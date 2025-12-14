@@ -1,11 +1,11 @@
-# Stacks Receipt of Life — NOTA as a Receipt of Life on Stacks 🧾⚡️
+# Stacks Receipt of Life
 
-A dApp on Stacks that allows you to stamp a one-sentence as note of your life, or receipt of your life, on-chain with Clarity 4, part of the $MyReceipt — receipt of life campaign.
+## 0. NOTA as a Receipt of Life on Stacks 🧾⚡️
 
 > NOTA = receipt | note  
 > **A tiny on-chain receipt that can move, earn royalties, and tell a story.**
 
-This project is a **minimal economic engine** built on the Stacks blockchain.
+This project is a **minimal economic engine** built on the Stacks blockchain. A dApp on Stacks blockchain that lets you stamp a one-sentence receipt of your life on-chain with Clarity 4, part of the $MyReceipt — receipt of life campaign.
 
 At its core is a very simple object:
 
@@ -446,3 +446,5 @@ You can fork this to build:
 
 If you build on this, fork it, or use it as a teaching example, that’s exactly the point:
 **to show how something as small as a receipt can anchor an entire micro-economy.**
+
+
