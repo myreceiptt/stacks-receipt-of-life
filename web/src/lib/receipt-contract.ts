@@ -125,6 +125,18 @@ function extractOkTuple(raw: unknown): Record<string, unknown> | null {
   return outerValue as Record<string, unknown>;
 }
 
+// Unwrap (ok (list ...)) shapes from cvToJSON
+function extractOkList(raw: unknown): unknown[] | null {
+  if (!isRecord(raw)) return null;
+  const outerValue = raw["value"];
+  if (Array.isArray(outerValue)) return outerValue as unknown[];
+  if (isRecord(outerValue)) {
+    const inner = outerValue["value"];
+    if (Array.isArray(inner)) return inner as unknown[];
+  }
+  return null;
+}
+
 function parseReceiptFromTuple(
   tuple: Record<string, unknown>,
   idHint?: number
@@ -554,9 +566,8 @@ export async function getOwnedReceiptsPaged(
     address
   );
 
-  if (!isRecord(raw)) return { items: [], nextStartId: null };
-  const list = raw["value"];
-  if (!Array.isArray(list)) return { items: [], nextStartId: null };
+  const list = extractOkList(raw);
+  if (!list) return { items: [], nextStartId: null };
 
   const items: Receipt[] = [];
   for (const item of list) {
@@ -595,9 +606,8 @@ export async function getCreatedReceiptsPaged(
     address
   );
 
-  if (!isRecord(raw)) return { items: [], nextStartId: null };
-  const list = raw["value"];
-  if (!Array.isArray(list)) return { items: [], nextStartId: null };
+  const list = extractOkList(raw);
+  if (!list) return { items: [], nextStartId: null };
 
   const items: Receipt[] = [];
   for (const item of list) {
@@ -650,9 +660,8 @@ export async function getRoyaltyReceiptsPaged(
     address
   );
 
-  if (!isRecord(raw)) return { items: [], nextStartId: null };
-  const list = raw["value"];
-  if (!Array.isArray(list)) return { items: [], nextStartId: null };
+  const list = extractOkList(raw);
+  if (!list) return { items: [], nextStartId: null };
 
   const items: Receipt[] = [];
   for (const item of list) {
@@ -711,13 +720,12 @@ export async function getActivityReceiptsPaged(
       startIdNum > backSpan ? startIdNum - backSpan : BigInt(1);
     const startId = candidateStart < BigInt(1) ? BigInt(1) : candidateStart;
 
-    const raw = await readOnlyCall("get-receipts-range", [
-      Cl.uint(startId),
-      Cl.uint(pageSize),
-    ]);
-    if (!isRecord(raw)) return { items: [], nextHighestId: null };
-    const list = raw["value"];
-    if (!Array.isArray(list)) return { items: [], nextHighestId: null };
+  const raw = await readOnlyCall("get-receipts-range", [
+    Cl.uint(startId),
+    Cl.uint(pageSize),
+  ]);
+  const list = extractOkList(raw);
+  if (!list) return { items: [], nextHighestId: null };
 
     const items: Receipt[] = [];
     for (const item of list) {
