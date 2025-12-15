@@ -119,7 +119,7 @@ export function StampReceiptSection() {
             <span>
               {address
                 ? "This will be stored on-chain and linked to your STX address."
-                : "Connect wallet to see your receipt on-chain."}
+                : "Connect wallet to stamp your receipt on-chain."}
             </span>
             <span className={isOverLimit ? "text-red-600" : ""}>
               {remaining} chars left
@@ -192,7 +192,7 @@ export function StampReceiptSection() {
           disabled={isSubmitting || !address || isOverLimit}
           className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
           {isSubmitting
-            ? "Stamping…"
+            ? "Stamping..."
             : isGift
             ? "Stamp as gift"
             : "Stamp for me"}
