@@ -28,7 +28,9 @@ export default function AdminPage() {
   const { address } = useWallet();
 
   const envAdmin = process.env.NEXT_PUBLIC_RECEIPT_ADMIN_ADDRESS ?? "";
-  const envStampFee = Number(process.env.NEXT_PUBLIC_RECEIPT_STAMP_FEE_MICRO ?? 0);
+  const envStampFee = Number(
+    process.env.NEXT_PUBLIC_RECEIPT_STAMP_FEE_MICRO ?? 0
+  );
   const envRoyaltyFee = Number(
     process.env.NEXT_PUBLIC_RECEIPT_ROYALTY_FEE_MICRO ?? 0
   );
@@ -160,12 +162,16 @@ export default function AdminPage() {
     try {
       setIsUpdatingAdmin(true);
       await setAdminOnChain(nextAdmin);
-      setAdminMessage("Admin updated on-chain. Remember you may lose admin access if this is a different address.");
+      setAdminMessage(
+        "Admin updated on-chain. Remember you may lose admin access if this is a different address."
+      );
       const cfg = await getConfig();
       if (cfg) setConfigState(cfg);
     } catch (err) {
       console.error(err);
-      setAdminError("Failed to update admin. Check permissions and address validity.");
+      setAdminError(
+        "Failed to update admin. Check permissions and address validity."
+      );
     } finally {
       setIsUpdatingAdmin(false);
     }
@@ -215,8 +221,8 @@ export default function AdminPage() {
             {version && version.major === 2
               ? "Active contract: Receipt of Life v2.x (Stacks mainnet)."
               : version && version.major === 1
-                ? "Legacy contract: v1.x. This UI uses v2 for normal flows."
-                : "Unable to determine contract version; please verify env and deployment."}
+              ? "Legacy contract: v1.x. This UI uses v2 for normal flows."
+              : "Unable to determine contract version; please verify env and deployment."}
           </div>
         </div>
       </div>
@@ -232,9 +238,28 @@ export default function AdminPage() {
           </span>
         </div>
         <p className="text-xs text-neutral-600">
-          v1.x is considered legacy and is not used by this dApp UI. Integrations should
-          target v2 (`receipt-of-life-v2`) for all features and fee safety.
+          v1.x is considered legacy and is not used by this dApp UI.
+          Integrations should target v2 (`receipt-of-life-v2`) for all features
+          and fee safety.
         </p>
+      </div>
+
+      <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+        <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+          Known limitation: STX self-transfer issue
+        </p>
+        <div className="mt-2 space-y-2 text-sm text-neutral-800">
+          <p>
+            v2 mitigates self-transfer: STAMP-FEE skipped when fee = 0 or
+            tx-sender = TREASURY; ROYALTY-FEE skipped when fee = 0 or tx-sender
+            = royalty-recipient.
+          </p>
+          <p>
+            v1 can still fail when sender == recipient for fees. Avoid stamping
+            or transferring when the fee recipient equals the sender (e.g. admin
+            stamping to treasury, or owner = royalty-recipient).
+          </p>
+        </div>
       </div>
 
       <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
@@ -246,11 +271,18 @@ export default function AdminPage() {
         )}
         {dataError && <p className="text-sm text-red-700">{dataError}</p>}
 
-        {!loadingData && !dataError && version && version.major === 2 && config && stats ? (
+        {!loadingData &&
+        !dataError &&
+        version &&
+        version.major === 2 &&
+        config &&
+        stats ? (
           <div className="space-y-3 text-sm text-neutral-800">
             <div>
               <span className="font-semibold">Contract Owner:</span>{" "}
-              <span className="font-mono break-words">{config.contractOwner}</span>
+              <span className="font-mono break-words">
+                {config.contractOwner}
+              </span>
             </div>
             <div>
               <span className="font-semibold">Treasury:</span>{" "}
@@ -287,48 +319,27 @@ export default function AdminPage() {
           </div>
         ) : null}
 
-        {!loadingData &&
-          !dataError &&
-          version &&
-          version.major === 1 && (
-            <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-              Legacy contract detected (v1.x). This UI uses v2 for normal flows; v1 data shown here is informational only.
-            </div>
-          )}
+        {!loadingData && !dataError && version && version.major === 1 && (
+          <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+            Legacy contract detected (v1.x). This UI uses v2 for normal flows;
+            v1 data shown here is informational only.
+          </div>
+        )}
 
-        {!loadingData &&
-          !dataError &&
-          (!version || (!config && !stats)) && (
-            <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-              Unable to load on-chain config/stats. Verify the contract address/name and network.
-            </div>
-          )}
-      </div>
-
-      <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
-        <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
-          Known limitation: STX self-transfer issue
-        </p>
-        <div className="mt-2 space-y-2 text-sm text-neutral-800">
-          <p>
-            v2 mitigates self-transfer: STAMP-FEE skipped when fee = 0 or tx-sender
-            = TREASURY; ROYALTY-FEE skipped when fee = 0 or tx-sender =
-            royalty-recipient.
-          </p>
-          <p>
-            v1 can still fail when sender == recipient for fees. Avoid stamping
-            or transferring when the fee recipient equals the sender (e.g. admin
-            stamping to treasury, or owner = royalty-recipient).
-          </p>
-        </div>
+        {!loadingData && !dataError && (!version || (!config && !stats)) && (
+          <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+            Unable to load on-chain config/stats. Verify the contract
+            address/name and network.
+          </div>
+        )}
       </div>
 
       {!isAdmin && (
         <div className="rounded-xl border border-black bg-white p-4 sm:p-6">
           <p className="text-sm text-neutral-800">
-            You&apos;re connected as <span className="font-mono">{shorten(address)}</span>,
-            but this is not the admin address. Only the admin can run on-chain
-            actions.
+            You&apos;re connected as{" "}
+            <span className="font-mono">{shorten(address)}</span>, but this is
+            not the admin address. Only the admin can run on-chain actions.
           </p>
         </div>
       )}
