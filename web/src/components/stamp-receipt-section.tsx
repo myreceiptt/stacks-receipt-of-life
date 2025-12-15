@@ -87,11 +87,10 @@ export function StampReceiptSection() {
           Stamp a receipt
         </p>
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
-          Write a Receipt of Life for today. When you stamp it, we&apos;ll
-          submit a transaction to the{" "}
-          <span className="font-medium">receipt-of-life</span> contract secured
-          by Bitcoin via Stacks mainnet—either for yourself or as a gift to
-          another Stacks address.
+          Write a Receipt of Life for today. When you stamp it, it will submit a
+          transaction to the <span className="font-medium">$MyReceipt</span>{" "}
+          contract secured by Bitcoin via Stacks mainnet—either for yourself or
+          as a gift to someone out there.
         </p>
       </div>
 
@@ -134,7 +133,9 @@ export function StampReceiptSection() {
             type="button"
             onClick={() => setIsGift(false)}
             className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-              !isGift ? "border-black bg-black text-white" : "border-black bg-white"
+              !isGift
+                ? "border-black bg-black text-white"
+                : "border-black bg-white"
             }`}>
             For me
           </button>
@@ -142,7 +143,9 @@ export function StampReceiptSection() {
             type="button"
             onClick={() => setIsGift(true)}
             className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-              isGift ? "border-black bg-black text-white" : "border-black bg-white"
+              isGift
+                ? "border-black bg-black text-white"
+                : "border-black bg-white"
             }`}>
             As a gift
           </button>
@@ -192,8 +195,8 @@ export function StampReceiptSection() {
           {isSubmitting
             ? "Stamping…"
             : isGift
-              ? "Stamp as gift"
-              : "Stamp for me"}
+            ? "Stamp as gift"
+            : "Stamp for me"}
         </button>
       </form>
     </section>
