@@ -17,7 +17,14 @@ async function loadStacksRequest() {
   return mod.request;
 }
 
-const CONTRACT_NAME = "receipt-of-life";
+const DEFAULT_CONTRACT_NAME = "receipt-of-life";
+// Set NEXT_PUBLIC_RECEIPT_CONTRACT_NAME to "receipt-of-life-v2" for the active mainnet contract.
+export const CONTRACT_NAME =
+  (process.env.NEXT_PUBLIC_RECEIPT_CONTRACT_NAME ?? DEFAULT_CONTRACT_NAME).trim() ||
+  DEFAULT_CONTRACT_NAME;
+export const CONTRACT_ADDRESS =
+  (process.env.NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS ?? "").trim();
+export const IS_V2 = CONTRACT_NAME === "receipt-of-life-v2"; // fallback to v1 behavior when not v2
 
 type StacksTxResponse = {
   txid?: string;
@@ -40,7 +47,7 @@ function getContractAddressOnly(): string {
 function getContractId(): string {
   const addr = getContractAddressOnly();
   if (!addr) return "";
-  // full "ST...address.receipt-of-life"
+  // full "ST...address.<contract-name>"
   return `${addr}.${CONTRACT_NAME}`;
 }
 
@@ -104,6 +111,43 @@ function extractCreatedAt(tuple: Record<string, unknown>): number | null {
   if (!createdRaw) return null;
   const parsed = Number(createdRaw);
   return Number.isNaN(parsed) ? null : parsed;
+}
+
+// Unwrap (ok (tuple ...)) shapes from cvToJSON
+function extractOkTuple(raw: unknown): Record<string, unknown> | null {
+  if (!isRecord(raw)) return null;
+  const outerValue = raw["value"];
+  if (!isRecord(outerValue)) return null;
+  const inner = outerValue["value"];
+  if (isRecord(inner)) {
+    return inner as Record<string, unknown>;
+  }
+  return outerValue as Record<string, unknown>;
+}
+
+function parseReceiptFromTuple(
+  tuple: Record<string, unknown>,
+  idHint?: number
+): Receipt | null {
+  const creator = extractPrincipal(tuple, "creator");
+  const owner = extractPrincipal(tuple, "owner");
+  const royaltyRecipient = extractPrincipal(tuple, "royalty-recipient");
+  const text = extractText(tuple);
+  const createdAt = extractCreatedAt(tuple);
+
+  if (!creator || !owner || !royaltyRecipient || !text || createdAt === null) {
+    console.warn("Unexpected receipt tuple JSON", tuple);
+    return null;
+  }
+
+  return {
+    id: typeof idHint === "number" ? idHint : -1,
+    creator,
+    owner,
+    royaltyRecipient,
+    text,
+    createdAt,
+  };
 }
 
 /**
@@ -222,25 +266,7 @@ export async function getReceipt(
     return null;
   }
 
-  const creator = extractPrincipal(tuple, "creator");
-  const owner = extractPrincipal(tuple, "owner");
-  const royaltyRecipient = extractPrincipal(tuple, "royalty-recipient");
-  const text = extractText(tuple);
-  const createdAt = extractCreatedAt(tuple);
-
-  if (!creator || !owner || !royaltyRecipient || !text || createdAt === null) {
-    console.warn("Unexpected receipt tuple JSON", raw);
-    return null;
-  }
-
-  return {
-    id,
-    creator,
-    owner,
-    royaltyRecipient,
-    text,
-    createdAt,
-  };
+  return parseReceiptFromTuple(tuple, id);
 }
 
 /**
@@ -293,6 +319,428 @@ export async function getReceiptsByCreator(
 
   // Newest first
   return receipts.sort((a, b) => b.id - a.id);
+}
+
+/**
+ * READ: paged receipts scan
+ */
+export async function getReceiptsRange(
+  startId: number | bigint,
+  limit: number
+): Promise<Receipt[]> {
+  const raw = await readOnlyCall("get-receipts-range", [
+    Cl.uint(startId),
+    Cl.uint(limit),
+  ]);
+
+  if (!isRecord(raw)) return [];
+
+  const list = raw["value"];
+  if (!Array.isArray(list)) return [];
+
+  const receipts: Receipt[] = [];
+  for (const item of list) {
+    const tuple = findReceiptTuple(item);
+    if (!tuple) continue;
+    const idRaw = extractValueString((tuple as Record<string, unknown>)["id"]);
+    const idParsed = idRaw ? Number(idRaw) : undefined;
+    const parsed = parseReceiptFromTuple(tuple, idParsed);
+    if (parsed) receipts.push(parsed);
+  }
+
+  return receipts;
+}
+
+/**
+ * READ: receipts by royalty-recipient (paged)
+ */
+export async function getReceiptsByRoyaltyRecipient(
+  recipientAddress: string,
+  startId: number | bigint,
+  limit: number
+): Promise<Receipt[]> {
+  const raw = await readOnlyCall(
+    "get-receipts-by-royalty-recipient",
+    [Cl.principal(recipientAddress), Cl.uint(startId), Cl.uint(limit)],
+    recipientAddress
+  );
+
+  if (!isRecord(raw)) return [];
+  const list = raw["value"];
+  if (!Array.isArray(list)) return [];
+
+  const receipts: Receipt[] = [];
+  for (const item of list) {
+    const tuple = findReceiptTuple(item);
+    if (!tuple) continue;
+    const idRaw = extractValueString((tuple as Record<string, unknown>)["id"]);
+    const idParsed = idRaw ? Number(idRaw) : undefined;
+    const parsed = parseReceiptFromTuple(tuple, idParsed);
+    if (parsed) receipts.push(parsed);
+  }
+
+  return receipts;
+}
+
+type Version = { major: number; minor: number; patch: number };
+
+export async function getVersion(): Promise<Version | null> {
+  try {
+    const raw = await readOnlyCall("get-version");
+    const tuple = extractOkTuple(raw);
+    if (!tuple) return null;
+
+    const majorStr = extractValueString(tuple["major"]);
+    const minorStr = extractValueString(tuple["minor"]);
+    const patchStr = extractValueString(tuple["patch"]);
+
+    if (!majorStr || !minorStr || !patchStr) return null;
+
+    const major = Number(majorStr);
+    const minor = Number(minorStr);
+    const patch = Number(patchStr);
+
+    if ([major, minor, patch].some((n) => Number.isNaN(n))) return null;
+    return { major, minor, patch };
+  } catch (err) {
+    console.error("getVersion failed", `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`, err);
+    return null;
+  }
+}
+
+type Config = {
+  contractOwner: string;
+  treasury: string;
+  admin: string;
+  stampFee: number;
+  royaltyFee: number;
+  lastId: number;
+  version: Version | null;
+};
+
+export async function getConfig(): Promise<Config | null> {
+  try {
+    const raw = await readOnlyCall("get-config");
+    const tuple = extractOkTuple(raw);
+    if (!tuple) return null;
+
+    const contractOwner = extractPrincipal(tuple, "contract-owner");
+    const treasury = extractPrincipal(tuple, "treasury");
+    const admin = extractPrincipal(tuple, "admin");
+    const stampFeeStr = extractValueString(tuple["stamp-fee"]);
+    const royaltyFeeStr = extractValueString(tuple["royalty-fee"]);
+    const lastIdStr = extractValueString(tuple["last-id"]);
+
+    const version = await getVersion();
+
+    if (!contractOwner || !treasury || !admin) return null;
+    if (!stampFeeStr || !royaltyFeeStr || !lastIdStr) return null;
+
+    const stampFee = Number(stampFeeStr);
+    const royaltyFee = Number(royaltyFeeStr);
+    const lastId = Number(lastIdStr);
+    if ([stampFee, royaltyFee, lastId].some((n) => Number.isNaN(n))) return null;
+
+    return {
+      contractOwner,
+      treasury,
+      admin,
+      stampFee,
+      royaltyFee,
+      lastId,
+      version,
+    };
+  } catch (err) {
+    console.error("getConfig failed", `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`, err);
+    return null;
+  }
+}
+
+type Stats = {
+  lastId: number;
+  totalSubmissions: number;
+  totalTransfers: number;
+  totalStampFee: number;
+  totalRoyaltyFee: number;
+  version: Version | null;
+};
+
+export async function getStats(): Promise<Stats | null> {
+  try {
+    const raw = await readOnlyCall("get-stats");
+    const tuple = extractOkTuple(raw);
+    if (!tuple) return null;
+
+    const lastIdStr = extractValueString(tuple["last-id"]);
+    const totalSubStr = extractValueString(tuple["total-submissions"]);
+    const totalTransfersStr = extractValueString(tuple["total-transfers"]);
+    const totalStampFeeStr = extractValueString(tuple["total-stamp-fee"]);
+    const totalRoyaltyFeeStr = extractValueString(tuple["total-royalty-fee"]);
+    const version = await getVersion();
+
+    if (
+      !lastIdStr ||
+      !totalSubStr ||
+      !totalTransfersStr ||
+      !totalStampFeeStr ||
+      !totalRoyaltyFeeStr
+    ) {
+      return null;
+    }
+
+    const lastId = Number(lastIdStr);
+    const totalSubmissions = Number(totalSubStr);
+    const totalTransfers = Number(totalTransfersStr);
+    const totalStampFee = Number(totalStampFeeStr);
+    const totalRoyaltyFee = Number(totalRoyaltyFeeStr);
+    const nums = [lastId, totalSubmissions, totalTransfers, totalStampFee, totalRoyaltyFee];
+    if (nums.some((n) => Number.isNaN(n))) return null;
+
+    return {
+      lastId,
+      totalSubmissions,
+      totalTransfers,
+      totalStampFee,
+      totalRoyaltyFee,
+      version,
+    };
+  } catch (err) {
+    console.error("getStats failed", `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`, err);
+    return null;
+  }
+}
+
+type PagedReceiptsResult = { items: Receipt[]; nextStartId: bigint | null };
+type ActivityPagedResult = { items: Receipt[]; nextHighestId: bigint | null };
+
+function clampLimit(limit?: number): number {
+  const max = 10; // matches MAX-PAGE-SIZE in v2 contract
+  if (!limit || limit <= 0) return max;
+  return limit > max ? max : limit;
+}
+
+function computeNextStart(
+  currentStart: bigint,
+  pageSize: number,
+  itemsLength: number,
+  lastId?: number
+): bigint | null {
+  if (itemsLength === 0) return null;
+  const next = currentStart + BigInt(pageSize);
+  if (typeof lastId === "number" && lastId > 0 && next > BigInt(lastId)) {
+    return null;
+  }
+  return next;
+}
+
+/**
+ * READ (UI helper): owned receipts, paged for v2, legacy full-scan for v1
+ */
+export async function getOwnedReceiptsPaged(
+  address: string,
+  startId: bigint | null,
+  limit?: number
+): Promise<PagedReceiptsResult> {
+  if (!IS_V2) {
+    const items = await getReceiptsByOwner(address);
+    return { items, nextStartId: null };
+  }
+
+  const pageSize = clampLimit(limit);
+  const start = startId ?? BigInt(1);
+  const raw = await readOnlyCall(
+    "get-receipts-by-owner",
+    [Cl.principal(address), Cl.uint(start), Cl.uint(pageSize)],
+    address
+  );
+
+  if (!isRecord(raw)) return { items: [], nextStartId: null };
+  const list = raw["value"];
+  if (!Array.isArray(list)) return { items: [], nextStartId: null };
+
+  const items: Receipt[] = [];
+  for (const item of list) {
+    const tuple = findReceiptTuple(item);
+    if (!tuple) continue;
+    const idRaw = extractValueString((tuple as Record<string, unknown>)["id"]);
+    const idParsed = idRaw ? Number(idRaw) : undefined;
+    const parsed = parseReceiptFromTuple(tuple, idParsed);
+    if (parsed) items.push(parsed);
+  }
+
+  const stats = await getStats();
+  const nextStartId = computeNextStart(start, pageSize, items.length, stats?.lastId);
+
+  return { items, nextStartId };
+}
+
+/**
+ * READ (UI helper): created receipts, paged for v2, legacy full-scan for v1
+ */
+export async function getCreatedReceiptsPaged(
+  address: string,
+  startId: bigint | null,
+  limit?: number
+): Promise<PagedReceiptsResult> {
+  if (!IS_V2) {
+    const items = await getReceiptsByCreator(address);
+    return { items, nextStartId: null };
+  }
+
+  const pageSize = clampLimit(limit);
+  const start = startId ?? BigInt(1);
+  const raw = await readOnlyCall(
+    "get-receipts-by-creator",
+    [Cl.principal(address), Cl.uint(start), Cl.uint(pageSize)],
+    address
+  );
+
+  if (!isRecord(raw)) return { items: [], nextStartId: null };
+  const list = raw["value"];
+  if (!Array.isArray(list)) return { items: [], nextStartId: null };
+
+  const items: Receipt[] = [];
+  for (const item of list) {
+    const tuple = findReceiptTuple(item);
+    if (!tuple) continue;
+    const idRaw = extractValueString((tuple as Record<string, unknown>)["id"]);
+    const idParsed = idRaw ? Number(idRaw) : undefined;
+    const parsed = parseReceiptFromTuple(tuple, idParsed);
+    if (parsed) items.push(parsed);
+  }
+
+  const stats = await getStats();
+  const nextStartId = computeNextStart(start, pageSize, items.length, stats?.lastId);
+
+  return { items, nextStartId };
+}
+
+/**
+ * READ (UI helper): receipts where address is royalty-recipient
+ */
+export async function getRoyaltyReceiptsPaged(
+  address: string,
+  startId: bigint | null,
+  limit?: number
+): Promise<PagedReceiptsResult> {
+  if (!IS_V2) {
+    // v1 fallback: full scan, filter client-side
+    const lastId = await getLastId();
+    if (!lastId || lastId <= 0) return { items: [], nextStartId: null };
+
+    const receipts: Receipt[] = [];
+    for (let id = 1; id <= lastId; id++) {
+      try {
+        const receipt = await getReceipt(id, address);
+        if (receipt && receipt.royaltyRecipient === address) {
+          receipts.push(receipt);
+        }
+      } catch (error) {
+        console.error("Failed to read receipt", id, error);
+      }
+    }
+    return { items: receipts.sort((a, b) => b.id - a.id), nextStartId: null };
+  }
+
+  const pageSize = clampLimit(limit);
+  const start = startId ?? BigInt(1);
+  const raw = await readOnlyCall(
+    "get-receipts-by-royalty-recipient",
+    [Cl.principal(address), Cl.uint(start), Cl.uint(pageSize)],
+    address
+  );
+
+  if (!isRecord(raw)) return { items: [], nextStartId: null };
+  const list = raw["value"];
+  if (!Array.isArray(list)) return { items: [], nextStartId: null };
+
+  const items: Receipt[] = [];
+  for (const item of list) {
+    const tuple = findReceiptTuple(item);
+    if (!tuple) continue;
+    const idRaw = extractValueString((tuple as Record<string, unknown>)["id"]);
+    const idParsed = idRaw ? Number(idRaw) : undefined;
+    const parsed = parseReceiptFromTuple(tuple, idParsed);
+    if (parsed) items.push(parsed);
+  }
+
+  const stats = await getStats();
+  const nextStartId = computeNextStart(start, pageSize, items.length, stats?.lastId);
+
+  return { items, nextStartId };
+}
+
+/**
+ * READ (UI helper): global activity, newest first
+ */
+export async function getActivityReceiptsPaged(
+  highestId: bigint | null,
+  limit?: number
+): Promise<ActivityPagedResult> {
+  if (!IS_V2) {
+    // v1 fallback: scan all, no paging
+    const lastId = await getLastId();
+    if (!lastId || lastId <= 0) return { items: [], nextHighestId: null };
+
+    const receipts: Receipt[] = [];
+    for (let id = 1; id <= lastId; id++) {
+      try {
+        const receipt = await getReceipt(id);
+        if (receipt) receipts.push(receipt);
+      } catch (error) {
+        console.error("Failed to read receipt", id, error);
+      }
+    }
+    const sorted = receipts.sort((a, b) => b.id - a.id);
+    return { items: sorted, nextHighestId: null };
+  }
+
+  try {
+    const pageSize = clampLimit(limit);
+
+    let effectiveHighest: bigint | null = highestId;
+    if (effectiveHighest === null) {
+      const stats = await getStats();
+      if (!stats || stats.lastId === 0) return { items: [], nextHighestId: null };
+      effectiveHighest = BigInt(stats.lastId);
+    }
+
+    const startIdNum = effectiveHighest <= 0 ? BigInt(1) : effectiveHighest;
+    const backSpan = BigInt(pageSize - 1);
+    const candidateStart =
+      startIdNum > backSpan ? startIdNum - backSpan : BigInt(1);
+    const startId = candidateStart < BigInt(1) ? BigInt(1) : candidateStart;
+
+    const raw = await readOnlyCall("get-receipts-range", [
+      Cl.uint(startId),
+      Cl.uint(pageSize),
+    ]);
+    if (!isRecord(raw)) return { items: [], nextHighestId: null };
+    const list = raw["value"];
+    if (!Array.isArray(list)) return { items: [], nextHighestId: null };
+
+    const items: Receipt[] = [];
+    for (const item of list) {
+      const tuple = findReceiptTuple(item);
+      if (!tuple) continue;
+      const idRaw = extractValueString((tuple as Record<string, unknown>)["id"]);
+      const idParsed = idRaw ? Number(idRaw) : undefined;
+      const parsed = parseReceiptFromTuple(tuple, idParsed);
+      if (parsed) items.push(parsed);
+    }
+
+    const sorted = items.sort((a, b) => b.id - a.id);
+
+    let nextHighestId: bigint | null = null;
+    if (items.length === pageSize && startId > BigInt(1)) {
+      nextHighestId = startId - BigInt(1);
+    }
+
+    return { items: sorted, nextHighestId };
+  } catch (error) {
+    console.error("Failed to load activity receipts", error);
+    return { items: [], nextHighestId: null };
+  }
 }
 
 /**
@@ -392,4 +840,71 @@ export async function setReceiptRoyaltyRecipient(
   )) as StacksTxResponse;
 
   return response;
+}
+
+/**
+ * WRITE: admin-only update fees (microSTX)
+ */
+export async function setFees(
+  newStampFeeMicro: bigint,
+  newRoyaltyFeeMicro: bigint
+): Promise<void> {
+  const contract = getContractId();
+
+  if (!contract) {
+    throw new Error(
+      "Contract address is not configured yet. Set NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS in .env.local after deploying the contract to Stacks mainnet."
+    );
+  }
+
+  const functionArgs = [Cl.uint(newStampFeeMicro), Cl.uint(newRoyaltyFeeMicro)];
+  const request = await loadStacksRequest();
+
+  const response = (await request(
+    { forceWalletSelect: false },
+    "stx_callContract",
+    {
+      contract: contract as `${string}.${string}`,
+      functionName: "set-fees",
+      functionArgs,
+      network: "mainnet",
+      postConditionMode: "allow",
+    }
+  )) as StacksTxResponse;
+
+  if (!response || !response.txid) {
+    throw new Error("set-fees transaction was not submitted.");
+  }
+}
+
+/**
+ * WRITE: admin-only change admin principal
+ */
+export async function setAdmin(newAdmin: string): Promise<void> {
+  const contract = getContractId();
+
+  if (!contract) {
+    throw new Error(
+      "Contract address is not configured yet. Set NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS in .env.local after deploying the contract to Stacks mainnet."
+    );
+  }
+
+  const functionArgs = [Cl.principal(newAdmin)];
+  const request = await loadStacksRequest();
+
+  const response = (await request(
+    { forceWalletSelect: false },
+    "stx_callContract",
+    {
+      contract: contract as `${string}.${string}`,
+      functionName: "set-admin",
+      functionArgs,
+      network: "mainnet",
+      postConditionMode: "allow",
+    }
+  )) as StacksTxResponse;
+
+  if (!response || !response.txid) {
+    throw new Error("set-admin transaction was not submitted.");
+  }
 }

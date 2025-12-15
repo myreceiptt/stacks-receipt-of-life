@@ -9,10 +9,10 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: receipt-of-life
+            contract-name: receipt-of-life-v2
             expected-sender: SP29ECHHQ6F9344SGGGRGDPTPFPTXA3GHXK28KCWH
-            cost: 60100
-            path: contracts/receipt-of-life.clar
+            cost: 237800
+            path: contracts/receipt-of-life-v2.clar
             anchor-block-only: true
             clarity-version: 4
       epoch: "3.3"

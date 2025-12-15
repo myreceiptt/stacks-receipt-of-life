@@ -43,6 +43,10 @@ This repo ships:
 
 If you’re looking for a **prototype of sustainable micro-economics** around tiny content objects (receipts, diary lines, quotes, etc.), this is meant as a **working blueprint** — for humans and AI agents alike.
 
+### Contract versions
+- **Active (v2)**: `SP29ECHHQ6F9344SGGGRGDPTPFPTXA3GHXK28KCWH.receipt-of-life-v2` (recommended; paging, stats, fee self-transfer mitigation).
+- **Legacy (v1)**: `SP29ECHHQ6F9344SGGGRGDPTPFPTXA3GHXK28KCWH.receipt-of-life` (historical/archival; not used by current UI flows).
+
 ---
 
 ## 1. Economic Model
@@ -446,5 +450,4 @@ You can fork this to build:
 
 If you build on this, fork it, or use it as a teaching example, that’s exactly the point:
 **to show how something as small as a receipt can anchor an entire micro-economy.**
-
 
