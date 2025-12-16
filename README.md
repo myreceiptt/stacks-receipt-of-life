@@ -260,3 +260,5 @@ This repo demonstrates:
 - Royalty routing independent from ownership
 - A minimal, sustainable micro-economy on Stacks using only STX and simple rules
 - A UI-friendly v2 contract with paging + global stats + fee safety
+
+---
