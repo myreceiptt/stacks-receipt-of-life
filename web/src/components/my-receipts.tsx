@@ -405,7 +405,7 @@ export function MyReceipts() {
               My Receipts · on-chain
             </p>
             <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
-              Your Receipt/s on Stacks.
+              Your Receipts on Stacks.
             </h1>
           </div>
 
@@ -426,11 +426,16 @@ export function MyReceipts() {
         </div>
 
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
-          This page shows your on-chain Receipts of Life stamped with the
-          connected Stacks wallet on mainnet. You can see NOTAs you own and
-          NOTAs you created. Each receipt is a small proof that you were paying
-          attention to your own life.
+          This page displays your{" "}
+          <span className="font-bold">Receipts of Life</span>, stamped with the
+          <span className="font-bold">$MyReceipt</span> contract secured by{" "}
+          <span className="font-bold">Bitcoin</span> via{" "}
+          <span className="font-bold">Stacks mainnet</span>.
         </p>
+        {/* You can view the
+          receipts you own, the ones you created, and those that bring royalty
+          for you. Each receipt is a small proof that you were paying attention
+          to your own life and the lives of others. */}
       </header>
 
       {!address && (
@@ -826,30 +831,30 @@ export function MyReceipts() {
                           className="underline">
                           View owner
                         </a>
-                      <span className="font-mono break-words">
-                        Royalty to: {r.royaltyRecipient.slice(0, 8)}…
-                        {r.royaltyRecipient.slice(-4)}
-                      </span>
-                      <a
-                        href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline">
-                        View royalty
-                      </a>
-                      {address &&
-                        (r.creator === address ||
-                          r.owner === address ||
-                          r.royaltyRecipient === address) && (
-                          <span className="rounded-full border border-black px-2 py-1">
-                            You are involved
-                          </span>
-                        )}
-                      {address === r.creator && (
-                        <div className="mt-4 w-full space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-700">
-                            Actions · Update royalty recipient
-                          </p>
+                        <span className="font-mono break-words">
+                          Royalty to: {r.royaltyRecipient.slice(0, 8)}…
+                          {r.royaltyRecipient.slice(-4)}
+                        </span>
+                        <a
+                          href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline">
+                          View royalty
+                        </a>
+                        {address &&
+                          (r.creator === address ||
+                            r.owner === address ||
+                            r.royaltyRecipient === address) && (
+                            <span className="rounded-full border border-black px-2 py-1">
+                              You are involved
+                            </span>
+                          )}
+                        {address === r.creator && (
+                          <div className="mt-4 w-full space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-700">
+                              Actions · Update royalty recipient
+                            </p>
                             <input
                               type="text"
                               value={royaltyInputs[r.id] ?? ""}

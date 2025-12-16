@@ -81,16 +81,17 @@ export function StampReceiptSection() {
     txId && `https://explorer.stacks.co/txid/${txId}?chain=mainnet`;
 
   return (
-    <section className="space-y-4">
+    <main className="space-y-4">
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-neutral-600">
           Stamp a receipt
         </p>
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
-          Write a Receipt of Life for today. When you stamp it, it will submit a
-          transaction to the <span className="font-medium">$MyReceipt</span>{" "}
-          contract secured by Bitcoin via Stacks mainnet—either for yourself or
-          as a gift to someone out there.
+          Write and stamp one sentence that feels like a receipt for how you
+          live today. When you stamp it, it will submit a transaction to the{" "}
+          <span className="font-medium">$MyReceipt</span> contract secured by
+          Bitcoin via Stacks mainnet—either for yourself or as a gift to someone
+          out there.
         </p>
       </div>
 
@@ -198,6 +199,6 @@ export function StampReceiptSection() {
             : "Stamp for me"}
         </button>
       </form>
-    </section>
+    </main>
   );
 }

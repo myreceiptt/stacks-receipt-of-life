@@ -179,26 +179,45 @@ export default function AdminPage() {
 
   if (!address) {
     return (
-      <section className="space-y-4">
-        <p className="text-center text-sm text-neutral-700">
-          Connect your wallet to view admin info.
-        </p>
+      <section className="space-y-6">
+        <header className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.25em] text-neutral-600">
+                Admin · config + stats
+              </p>
+              <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
+                Connect Your Wallet to View Admin Info.
+              </h1>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-[11px]"></div>
+          </div>
+        </header>
       </section>
     );
   }
 
   return (
     <section className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.25em] text-neutral-600">
-          Admin
-        </p>
-        <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
-          Receipt of Life · Admin Dashboard
-        </h1>
-        <p className="max-w-2xl text-sm text-neutral-700">
-          On-chain configuration and admin tools for this contract on Stacks
-          mainnet.
+      <header className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-xs uppercase tracking-[0.25em] text-neutral-600">
+              Admin · config + stats
+            </p>
+            <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
+              Your Admin Dashboard.
+            </h1>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-[11px]"></div>
+        </div>
+
+        <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
+          On-chain configuration and admin tools for the{" "}
+          <span className="font-bold">$MyReceipt</span> contract on{" "}
+          <span className="font-bold">Stacks mainnet</span>.
         </p>
       </header>
 
