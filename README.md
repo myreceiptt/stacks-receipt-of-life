@@ -239,7 +239,7 @@ The `web/` directory hosts a **Next.js + React** front-end.
 
   - On success: show Stacks Explorer link for the transaction.
 
-- `/my-receipts` — **Your NOTA on Stacks**
+- `/me` — **Your NOTA on Stacks**
 
   - Two main tabs:
 
