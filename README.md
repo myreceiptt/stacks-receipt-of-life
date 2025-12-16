@@ -347,7 +347,7 @@ npm run dev     # start local dev server
 Then open:
 
 - `http://localhost:3000` → home (Stamp Receipt)
-- `http://localhost:3000/my-receipts`
+- `http://localhost:3000/me`
 - `http://localhost:3000/admin` (only useful if you connect as admin)
 
 ---
