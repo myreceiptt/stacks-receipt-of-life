@@ -193,6 +193,12 @@ export default function AdminPage() {
 
             <div className="flex flex-wrap items-center gap-2 text-[11px]"></div>
           </div>
+
+          <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
+            On-chain configuration and admin tools for the{" "}
+            <span className="font-bold">$MyReceipt</span> contract on{" "}
+            <span className="font-bold">Stacks mainnet</span>.
+          </p>
         </header>
       </section>
     );
