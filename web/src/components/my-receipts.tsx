@@ -432,11 +432,12 @@ export function MyReceipts() {
           <span className="font-bold">Bitcoin</span> via{" "}
           <span className="font-bold">Stacks mainnet</span>.
         </p>
-        {/* You can view the
+      </header>
+
+      {/* You can view the
           receipts you own, the ones you created, and those that bring royalty
           for you. Each receipt is a small proof that you were paying attention
           to your own life and the lives of others. */}
-      </header>
 
       {!address && (
         <div className="rounded-md border border-dashed border-black bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
