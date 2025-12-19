@@ -601,11 +601,11 @@ export function MyReceipts() {
                         {date.toLocaleString()}
                       </span>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-neutral-900">
+                    <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
                       {r.text}
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
-                      <span className="font-mono break-words">
+                      <span className="font-mono wrap-break-word">
                         Creator: {r.creator.slice(0, 8)}…{r.creator.slice(-4)}
                       </span>
                       <a
@@ -615,7 +615,7 @@ export function MyReceipts() {
                         className="underline">
                         View creator
                       </a>
-                      <span className="font-mono break-words">
+                      <span className="font-mono wrap-break-word">
                         Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
                       </span>
                       <a
@@ -625,7 +625,7 @@ export function MyReceipts() {
                         className="underline">
                         View owner
                       </a>
-                      <span className="font-mono break-words">
+                      <span className="font-mono wrap-break-word">
                         Royalty to: {r.royaltyRecipient.slice(0, 8)}…
                         {r.royaltyRecipient.slice(-4)}
                       </span>
@@ -722,11 +722,11 @@ export function MyReceipts() {
                         {date.toLocaleString()}
                       </span>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-neutral-900">
+                    <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
                       {r.text}
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
-                      <span className="font-mono break-words">
+                      <span className="font-mono wrap-break-word">
                         Creator: {r.creator.slice(0, 8)}…{r.creator.slice(-4)}
                       </span>
                       <a
@@ -736,7 +736,7 @@ export function MyReceipts() {
                         className="underline">
                         View creator
                       </a>
-                      <span className="font-mono break-words">
+                      <span className="font-mono wrap-break-word">
                         Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
                       </span>
                       <a
@@ -746,7 +746,7 @@ export function MyReceipts() {
                         className="underline">
                         View owner
                       </a>
-                      <span className="font-mono break-words">
+                      <span className="font-mono wrap-break-word">
                         Royalty to: {r.royaltyRecipient.slice(0, 8)}…
                         {r.royaltyRecipient.slice(-4)}
                       </span>
@@ -808,11 +808,11 @@ export function MyReceipts() {
                           {date.toLocaleString()}
                         </span>
                       </div>
-                      <p className="mt-2 whitespace-pre-wrap break-words text-neutral-900">
+                      <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
                         {r.text}
                       </p>
                       <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
-                        <span className="font-mono break-words">
+                        <span className="font-mono wrap-break-word">
                           Creator: {r.creator.slice(0, 8)}…{r.creator.slice(-4)}
                         </span>
                         <a
@@ -822,7 +822,7 @@ export function MyReceipts() {
                           className="underline">
                           View creator
                         </a>
-                        <span className="font-mono break-words">
+                        <span className="font-mono wrap-break-word">
                           Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
                         </span>
                         <a
@@ -832,7 +832,7 @@ export function MyReceipts() {
                           className="underline">
                           View owner
                         </a>
-                        <span className="font-mono break-words">
+                        <span className="font-mono wrap-break-word">
                           Royalty to: {r.royaltyRecipient.slice(0, 8)}…
                           {r.royaltyRecipient.slice(-4)}
                         </span>
@@ -929,11 +929,11 @@ export function MyReceipts() {
                           {date.toLocaleString()}
                         </span>
                       </div>
-                      <p className="mt-2 whitespace-pre-wrap break-words text-neutral-900">
+                      <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
                         {r.text}
                       </p>
                       <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
-                        <span className="font-mono break-words">
+                        <span className="font-mono wrap-break-word">
                           Creator: {r.creator.slice(0, 8)}…{r.creator.slice(-4)}
                         </span>
                         <a
@@ -943,7 +943,7 @@ export function MyReceipts() {
                           className="underline">
                           View creator
                         </a>
-                        <span className="font-mono break-words">
+                        <span className="font-mono wrap-break-word">
                           Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
                         </span>
                         <a
@@ -953,7 +953,7 @@ export function MyReceipts() {
                           className="underline">
                           View owner
                         </a>
-                        <span className="font-mono break-words">
+                        <span className="font-mono wrap-break-word">
                           Royalty to: {r.royaltyRecipient.slice(0, 8)}…
                           {r.royaltyRecipient.slice(-4)}
                         </span>

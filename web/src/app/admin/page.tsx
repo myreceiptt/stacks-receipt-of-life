@@ -234,7 +234,7 @@ export default function AdminPage() {
         <div className="space-y-2 text-sm text-neutral-800">
           <div>
             <span className="font-semibold">Contract ID:</span>{" "}
-            <span className="font-mono break-words">{contractId}</span>
+            <span className="font-mono wrap-break-word">{contractId}</span>
           </div>
           <div>
             <span className="font-semibold">Version:</span>{" "}
@@ -258,7 +258,7 @@ export default function AdminPage() {
         </p>
         <div>
           <span className="font-semibold">V1 Contract ID:</span>{" "}
-          <span className="font-mono break-words">
+          <span className="font-mono wrap-break-word">
             SP29ECHHQ6F9344SGGGRGDPTPFPTXA3GHXK28KCWH.receipt-of-life
           </span>
         </div>
@@ -305,17 +305,17 @@ export default function AdminPage() {
           <div className="space-y-3 text-sm text-neutral-800">
             <div>
               <span className="font-semibold">Contract Owner:</span>{" "}
-              <span className="font-mono break-words">
+              <span className="font-mono wrap-break-word">
                 {config.contractOwner}
               </span>
             </div>
             <div>
               <span className="font-semibold">Treasury:</span>{" "}
-              <span className="font-mono break-words">{config.treasury}</span>
+              <span className="font-mono wrap-break-word">{config.treasury}</span>
             </div>
             <div>
               <span className="font-semibold">Admin:</span>{" "}
-              <span className="font-mono break-words">{config.admin}</span>
+              <span className="font-mono wrap-break-word">{config.admin}</span>
             </div>
             <div>
               <span className="font-semibold">STAMP-FEE:</span>{" "}
