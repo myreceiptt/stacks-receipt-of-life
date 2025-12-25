@@ -7,14 +7,63 @@ import {
   fetchCallReadOnlyFunction,
 } from "@stacks/transactions";
 import { STACKS_MAINNET } from "@stacks/network";
+import { getUniversalConnector } from "@/lib/reown";
 
-async function loadStacksRequest() {
+// Allow BigInt inside Clarity values to be serialized over WalletConnect/AppKit
+(BigInt.prototype as { toJSON?: () => string }).toJSON = function () {
+  return this.toString();
+};
+
+type StacksRequest = (
+  _options: unknown,
+  method: string,
+  params: unknown
+) => Promise<unknown>;
+
+async function loadStacksRequest(): Promise<StacksRequest> {
   // Server should never call wallet; throw early
   if (typeof window === "undefined") {
     throw new Error("Wallet request attempted on the server.");
   }
-  const mod = await import("@stacks/connect");
-  return mod.request;
+
+  const connector = await getUniversalConnector();
+  const provider = connector.provider as unknown as {
+    session: {
+      topic: string;
+      namespaces?: {
+        stacks?: {
+          chains?: string[];
+          accounts?: string[];
+        };
+      };
+    } | null;
+    request(args: {
+      chainId: string;
+      topic: string;
+      request: { method: string; params: unknown };
+    }): Promise<unknown>;
+  };
+
+  const session = provider.session;
+
+  if (!session) {
+    throw new Error(
+      "No active Stacks wallet session. Please connect your wallet first."
+    );
+  }
+
+  const chainId = session.namespaces?.stacks?.chains?.[0] ?? "stacks:1";
+
+  return async (_options, method, params) => {
+    return provider.request({
+      chainId,
+      topic: session.topic,
+      request: {
+        method,
+        params,
+      },
+    });
+  };
 }
 
 const DEFAULT_CONTRACT_NAME = "receipt-of-life";

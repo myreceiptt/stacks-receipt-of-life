@@ -1,57 +1,93 @@
-// web/lib/reown.ts
 import type { AppKitNetwork } from "@reown/appkit/networks";
 import type { CustomCaipNetwork } from "@reown/appkit-common";
 import { UniversalConnector } from "@reown/appkit-universal-connector";
 
-export const projectId =
-  process.env.NEXT_PUBLIC_REOWN_PROJECT_ID || "REPLACE_ME";
+const fallbackProjectId = "b56e18d47c72ab683b10814fe9495694";
 
-if (!projectId) {
-  throw new Error("Reown projectId not set");
+export const projectId =
+  process.env.NEXT_PUBLIC_REOWN_PROJECT_ID ?? fallbackProjectId;
+
+if (!process.env.NEXT_PUBLIC_REOWN_PROJECT_ID) {
+  console.warn(
+    "NEXT_PUBLIC_REOWN_PROJECT_ID is not set; using the public demo id for local development."
+  );
 }
 
-const stacksMainnet: CustomCaipNetwork<"stacks"> = {
-  id: 1, // we’ll refine this
-  chainNamespace: "stacks",
-  caipNetworkId: "stacks:mainnet", // we’ll confirm exact CAIP string
-  name: "Stacks Mainnet",
+const suiMainnet = {
+  id: 1,
+  chainNamespace: "sui",
+  caipNetworkId: "sui:mainnet",
+  name: "Sui",
   nativeCurrency: {
-    name: "Stacks",
+    name: "SUI",
+    symbol: "SUI",
+    decimals: 9,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://fullnode.mainnet.sui.io:443"],
+    },
+  },
+} as CustomCaipNetwork<"sui">;
+
+const stacksMainnet = {
+  id: 1,
+  chainNamespace: "stacks",
+  caipNetworkId: "stacks:1",
+  name: "Stacks",
+  nativeCurrency: {
+    name: "STX",
     symbol: "STX",
     decimals: 6,
   },
   rpcUrls: {
     default: {
-      http: ["https://stacks-node-api.mainnet.stacks.co"],
+      http: ["https://stacks-node-mainnet.stacks.co"],
     },
   },
-};
+} as CustomCaipNetwork<"stacks">;
 
-export const networks = [stacksMainnet] as [AppKitNetwork, ...AppKitNetwork[]];
+export const networks = [suiMainnet, stacksMainnet] as [
+  AppKitNetwork,
+  ...AppKitNetwork[]
+];
 
-let universalConnectorPromise: Promise<UniversalConnector> | null = null;
+let universalConnector: UniversalConnector | undefined;
 
-export function getUniversalConnector() {
-  if (!universalConnectorPromise) {
-    universalConnectorPromise = UniversalConnector.init({
-      projectId,
-      metadata: {
-        name: "Stacks Receipt of Life",
-        description: "NOTA as a receipt of life on Stacks",
-        url: "https://stacks.endhonesa.com",
-        icons: ["https://stacks.endhonesa.com/icon.png"],
-      },
-      networks: [
-        {
-          methods: [
-            // we’ll list Stacks RPC methods needed for contract calls
-          ],
-          chains: [stacksMainnet as CustomCaipNetwork<"stacks">],
-          events: [],
-          namespace: "stacks",
-        },
-      ],
-    });
+export async function getUniversalConnector() {
+  if (universalConnector) {
+    return universalConnector;
   }
-  return universalConnectorPromise;
+
+  universalConnector = await UniversalConnector.init({
+    projectId,
+    metadata: {
+      name: "Stacks Receipt of Life",
+      description: "Wallet connection for stacks-receipt-of-life dApp",
+      url: "http://localhost:3000",
+      icons: ["https://appkit.reown.com/icon.png"],
+    },
+    networks: [
+      {
+        namespace: "sui",
+        methods: ["sui_signPersonalMessage"],
+        events: [],
+        chains: [suiMainnet],
+      },
+      {
+        namespace: "stacks",
+        methods: [
+          "stx_getAddresses",
+          "stx_signMessage",
+          "stx_transferStx",
+          "stx_signTransaction",
+          "stx_callContract",
+        ],
+        events: ["stx_chainChanged"],
+        chains: [stacksMainnet],
+      },
+    ],
+  });
+
+  return universalConnector;
 }
