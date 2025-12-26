@@ -13,6 +13,7 @@ export function ConnectWalletButton() {
   const { disconnect: disconnectWc } = useDisconnect();
   const [isModalOpen, setModalOpen] = useState(false);
   const activeAddress = address ?? wcAddress ?? null;
+  const hasConnection = !!activeAddress;
   const short = activeAddress
     ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`
     : "Connect wallet";
@@ -23,11 +24,11 @@ export function ConnectWalletButton() {
         onClick={() => setModalOpen(true)}
         className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-60"
       >
-        {isConnecting ? "Connecting…" : short}
+        {isConnecting ? "Connect Wallet" : short}
       </button>
       {isModalOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(230,230,230,0.5)] backdrop-blur-[8px] px-4 dark:bg-[rgba(0,0,0,0.5)]"
           onClick={() => setModalOpen(false)}
         >
           <div
@@ -46,29 +47,31 @@ export function ConnectWalletButton() {
               </button>
             </div>
 
-            <div className="mt-4 space-y-3">
-              <button
-                onClick={() => {
-                  connect();
-                  setModalOpen(false);
-                }}
-                disabled={isConnecting}
-                className="w-full rounded-xl border border-black px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-60"
-              >
-                {isConnecting
-                  ? "Connecting…"
-                  : "Connect Stacks wallet"}
-              </button>
-              <button
-                onClick={() => {
-                  setModalOpen(false);
-                  void open();
-                }}
-                className="w-full rounded-xl border border-black bg-black px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black"
-              >
-                WalletConnect QR Code
-              </button>
-            </div>
+            {!hasConnection ? (
+              <div className="mt-4 space-y-3">
+                <button
+                  onClick={() => {
+                    connect();
+                    setModalOpen(false);
+                  }}
+                  disabled={isConnecting}
+                  className="w-full rounded-xl border border-black px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-60"
+                >
+                  {isConnecting
+                    ? "Connecting…"
+                    : "Connect Stacks wallet"}
+                </button>
+                <button
+                  onClick={() => {
+                    setModalOpen(false);
+                    void open();
+                  }}
+                  className="w-full rounded-xl border border-black bg-black px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black"
+                >
+                  WalletConnect QR Code
+                </button>
+              </div>
+            ) : null}
 
             {address ? (
               <div className="mt-4 rounded-xl border border-black/20 bg-white px-3 py-2 text-xs">
