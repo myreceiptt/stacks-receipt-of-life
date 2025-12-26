@@ -2,28 +2,143 @@
 
 import {
   Cl,
+  cvToHex,
   cvToJSON,
   type ClarityValue,
   fetchCallReadOnlyFunction,
 } from "@stacks/transactions";
 import { STACKS_MAINNET } from "@stacks/network";
 
-async function loadStacksRequest() {
+import type { UniversalConnector } from "@reown/appkit-universal-connector";
+import { getStacksUniversalConnector } from "@/lib/reown-stacks";
+
+type StacksRequestOptions = {
+  forceWalletSelect?: boolean;
+};
+
+type StacksRequestParams = Record<string, unknown>;
+
+// Signature ini harus kompatibel dengan `request` dari @stacks/connect
+type StacksRequestFn = (
+  options: StacksRequestOptions,
+  method: string,
+  params: StacksRequestParams
+) => Promise<unknown>;
+
+let stacksConnector: UniversalConnector | null = null;
+
+async function getConnector(): Promise<UniversalConnector> {
+  if (!stacksConnector) {
+    stacksConnector = await getStacksUniversalConnector();
+  }
+  return stacksConnector;
+}
+
+async function loadStacksRequest(): Promise<StacksRequestFn> {
   // Server should never call wallet; throw early
   if (typeof window === "undefined") {
     throw new Error("Wallet request attempted on the server.");
   }
-  const mod = await import("@stacks/connect");
-  return mod.request;
+
+  const connector = await getConnector();
+
+  const toHexArg = (arg: unknown): unknown => {
+    // Kalau sudah string, kirim apa adanya (assume sudah encoded oleh caller)
+    if (typeof arg === "string") return arg;
+
+    // Kalau ClarityValue, convert ke hex tanpa prefix 0x
+    if (arg && typeof arg === "object") {
+      try {
+        const hex = cvToHex(arg as ClarityValue);
+        return hex.replace(/^0x/i, "");
+      } catch {
+        // fallback: kirim apa adanya
+        return arg;
+      }
+    }
+
+    return arg;
+  };
+
+  const requestFn: StacksRequestFn = async (
+    options,
+    method,
+    params
+  ): Promise<unknown> => {
+    if (method !== "stx_callContract") {
+      throw new Error(`Unsupported Stacks method: ${method}`);
+    }
+
+    // Pastikan ada session. Kalau belum ada atau forceWalletSelect = true,
+    // buka WalletConnect modal.
+    let session = connector.provider.session;
+
+    if (!session || options.forceWalletSelect) {
+      const { session: newSession } = await connector.connect();
+      session = newSession;
+    }
+
+    if (!session) {
+      throw new Error("No active Stacks WalletConnect session.");
+    }
+
+    // Clone params dan normalisasi functionArgs
+    const baseParams: StacksRequestParams = { ...(params ?? {}) };
+
+    if (
+      "functionArgs" in baseParams &&
+      Array.isArray((baseParams as { functionArgs?: unknown[] }).functionArgs)
+    ) {
+      const currentArgs = (baseParams as { functionArgs: unknown[] })
+        .functionArgs;
+      (baseParams as { functionArgs: unknown[] }).functionArgs =
+        currentArgs.map(toHexArg);
+    }
+
+    const rpcResponse = await connector.request(
+      {
+        method: "stx_callContract",
+        params: baseParams,
+      },
+      "stacks:1"
+    );
+
+    // Reown App RPC balikin `{ jsonrpc, id, result }`, sedangkan
+    // @stacks/connect selama ini balikin langsung `{ txid, transaction }`.
+    // Supaya kode di bawah tidak berubah, kita unwrap `result` kalau ada.
+    if (
+      typeof rpcResponse === "object" &&
+      rpcResponse !== null &&
+      "result" in (rpcResponse as Record<string, unknown>)
+    ) {
+      return (rpcResponse as { result: unknown }).result;
+    }
+
+    return rpcResponse;
+  };
+
+  return requestFn;
 }
+
+// async function loadStacksRequest() {
+//   // Server should never call wallet; throw early
+//   if (typeof window === "undefined") {
+//     throw new Error("Wallet request attempted on the server.");
+//   }
+
+//   const mod = await import("@stacks/connect");
+//   return mod.request;
+// }
 
 const DEFAULT_CONTRACT_NAME = "receipt-of-life";
 // Set NEXT_PUBLIC_RECEIPT_CONTRACT_NAME to "receipt-of-life-v2" for the active mainnet contract.
 export const CONTRACT_NAME =
-  (process.env.NEXT_PUBLIC_RECEIPT_CONTRACT_NAME ?? DEFAULT_CONTRACT_NAME).trim() ||
-  DEFAULT_CONTRACT_NAME;
-export const CONTRACT_ADDRESS =
-  (process.env.NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS ?? "").trim();
+  (
+    process.env.NEXT_PUBLIC_RECEIPT_CONTRACT_NAME ?? DEFAULT_CONTRACT_NAME
+  ).trim() || DEFAULT_CONTRACT_NAME;
+export const CONTRACT_ADDRESS = (
+  process.env.NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS ?? ""
+).trim();
 export const IS_V2 = CONTRACT_NAME === "receipt-of-life-v2"; // fallback to v1 behavior when not v2
 
 type StacksTxResponse = {
@@ -168,7 +283,7 @@ function parseReceiptFromTuple(
 async function readOnlyCall(
   functionName: string,
   functionArgs: ClarityValue[] = [],
-    senderAddress?: string
+  senderAddress?: string
 ): Promise<unknown> {
   const contractAddress = getContractAddressOnly();
   if (!contractAddress) {
@@ -243,7 +358,11 @@ function findReceiptTuple(node: unknown): Record<string, unknown> | null {
   // Kalau node ini wrapper tuple: { type: "tuple", value: { ... } }
   const typeField = node["type"];
   const valueField = node["value"];
-  if (typeField === "tuple" && isRecord(valueField) && hasAllFields(valueField)) {
+  if (
+    typeField === "tuple" &&
+    isRecord(valueField) &&
+    hasAllFields(valueField)
+  ) {
     return valueField;
   }
 
@@ -415,7 +534,11 @@ export async function getVersion(): Promise<Version | null> {
     if ([major, minor, patch].some((n) => Number.isNaN(n))) return null;
     return { major, minor, patch };
   } catch (err) {
-    console.error("getVersion failed", `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`, err);
+    console.error(
+      "getVersion failed",
+      `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+      err
+    );
     return null;
   }
 }
@@ -451,7 +574,8 @@ export async function getConfig(): Promise<Config | null> {
     const stampFee = Number(stampFeeStr);
     const royaltyFee = Number(royaltyFeeStr);
     const lastId = Number(lastIdStr);
-    if ([stampFee, royaltyFee, lastId].some((n) => Number.isNaN(n))) return null;
+    if ([stampFee, royaltyFee, lastId].some((n) => Number.isNaN(n)))
+      return null;
 
     return {
       contractOwner,
@@ -463,7 +587,11 @@ export async function getConfig(): Promise<Config | null> {
       version,
     };
   } catch (err) {
-    console.error("getConfig failed", `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`, err);
+    console.error(
+      "getConfig failed",
+      `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+      err
+    );
     return null;
   }
 }
@@ -505,7 +633,13 @@ export async function getStats(): Promise<Stats | null> {
     const totalTransfers = Number(totalTransfersStr);
     const totalStampFee = Number(totalStampFeeStr);
     const totalRoyaltyFee = Number(totalRoyaltyFeeStr);
-    const nums = [lastId, totalSubmissions, totalTransfers, totalStampFee, totalRoyaltyFee];
+    const nums = [
+      lastId,
+      totalSubmissions,
+      totalTransfers,
+      totalStampFee,
+      totalRoyaltyFee,
+    ];
     if (nums.some((n) => Number.isNaN(n))) return null;
 
     return {
@@ -517,7 +651,11 @@ export async function getStats(): Promise<Stats | null> {
       version,
     };
   } catch (err) {
-    console.error("getStats failed", `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`, err);
+    console.error(
+      "getStats failed",
+      `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
+      err
+    );
     return null;
   }
 }
@@ -580,7 +718,12 @@ export async function getOwnedReceiptsPaged(
   }
 
   const stats = await getStats();
-  const nextStartId = computeNextStart(start, pageSize, items.length, stats?.lastId);
+  const nextStartId = computeNextStart(
+    start,
+    pageSize,
+    items.length,
+    stats?.lastId
+  );
 
   return { items, nextStartId };
 }
@@ -620,7 +763,12 @@ export async function getCreatedReceiptsPaged(
   }
 
   const stats = await getStats();
-  const nextStartId = computeNextStart(start, pageSize, items.length, stats?.lastId);
+  const nextStartId = computeNextStart(
+    start,
+    pageSize,
+    items.length,
+    stats?.lastId
+  );
 
   return { items, nextStartId };
 }
@@ -674,7 +822,12 @@ export async function getRoyaltyReceiptsPaged(
   }
 
   const stats = await getStats();
-  const nextStartId = computeNextStart(start, pageSize, items.length, stats?.lastId);
+  const nextStartId = computeNextStart(
+    start,
+    pageSize,
+    items.length,
+    stats?.lastId
+  );
 
   return { items, nextStartId };
 }
@@ -710,7 +863,8 @@ export async function getActivityReceiptsPaged(
     let effectiveHighest: bigint | null = highestId;
     if (effectiveHighest === null) {
       const stats = await getStats();
-      if (!stats || stats.lastId === 0) return { items: [], nextHighestId: null };
+      if (!stats || stats.lastId === 0)
+        return { items: [], nextHighestId: null };
       effectiveHighest = BigInt(stats.lastId);
     }
 
@@ -720,18 +874,20 @@ export async function getActivityReceiptsPaged(
       startIdNum > backSpan ? startIdNum - backSpan : BigInt(1);
     const startId = candidateStart < BigInt(1) ? BigInt(1) : candidateStart;
 
-  const raw = await readOnlyCall("get-receipts-range", [
-    Cl.uint(startId),
-    Cl.uint(pageSize),
-  ]);
-  const list = extractOkList(raw);
-  if (!list) return { items: [], nextHighestId: null };
+    const raw = await readOnlyCall("get-receipts-range", [
+      Cl.uint(startId),
+      Cl.uint(pageSize),
+    ]);
+    const list = extractOkList(raw);
+    if (!list) return { items: [], nextHighestId: null };
 
     const items: Receipt[] = [];
     for (const item of list) {
       const tuple = findReceiptTuple(item);
       if (!tuple) continue;
-      const idRaw = extractValueString((tuple as Record<string, unknown>)["id"]);
+      const idRaw = extractValueString(
+        (tuple as Record<string, unknown>)["id"]
+      );
       const idParsed = idRaw ? Number(idRaw) : undefined;
       const parsed = parseReceiptFromTuple(tuple, idParsed);
       if (parsed) items.push(parsed);

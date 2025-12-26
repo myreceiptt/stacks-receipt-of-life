@@ -30,9 +30,14 @@ export function Navbar() {
 
         <nav className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
           <Link
+            href="/"
+            className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline">
+            Activity
+          </Link>
+          <Link
             href="/me"
             className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline">
-            My Receipts
+            Receipts
           </Link>
           {isAdmin && (
             <Link

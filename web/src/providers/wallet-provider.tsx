@@ -6,7 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
-  ReactNode,
+  type ReactNode,
 } from "react";
 
 type WalletState = {
@@ -26,7 +26,6 @@ const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 const STORAGE_KEY = "stacks.wallet.address";
 
 function extractFirstAddress(result: unknown): string | null {
-  // Unwrap { result: ... } if present
   const payload =
     result &&
     typeof result === "object" &&
@@ -49,7 +48,6 @@ function extractFirstAddress(result: unknown): string | null {
     );
   };
 
-  // If payload has top-level addresses array (e.g., [{ address, symbol: "STX" }])
   if (
     payload &&
     typeof payload === "object" &&
@@ -104,7 +102,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         const method = preferred[i];
         try {
           result = await stacksRequest(
-            { forceWalletSelect: i === 0 }, // prompt only once
+            { forceWalletSelect: i === 0 },
             method as "getAddresses"
           );
           break;
@@ -122,10 +120,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         throw new Error("Could not determine Stacks address from wallet.");
       }
 
-      setState({
-        address: stxAddress,
-        isConnecting: false,
-      });
+      setState({ address: stxAddress, isConnecting: false });
       try {
         window.localStorage.setItem(STORAGE_KEY, stxAddress);
       } catch {
@@ -133,10 +128,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Wallet connection failed", error);
-      setState({
-        address: null,
-        isConnecting: false,
-      });
+      setState({ address: null, isConnecting: false });
     }
   }, []);
 
@@ -146,13 +138,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
-    setState({
-      address: null,
-      isConnecting: false,
-    });
+    setState({ address: null, isConnecting: false });
   }, []);
 
-  // Hydrate from cached address only (no wallet prompt)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const cached = window.localStorage.getItem(STORAGE_KEY);
