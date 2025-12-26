@@ -3,5 +3,5 @@
 import { AppKitButton } from "@reown/appkit/react";
 
 export function ReownConnectButton() {
-  return <AppKitButton />;
+  return <AppKitButton namespace="stacks" />;
 }
