@@ -25,6 +25,23 @@ const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "stacks.wallet.address";
 
+function isUserCancelled(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as { message?: string; name?: string; code?: number };
+  const message = (err.message ?? "").toLowerCase();
+  const name = (err.name ?? "").toLowerCase();
+  return (
+    name.includes("abort") ||
+    name.includes("cancel") ||
+    message.includes("cancel") ||
+    message.includes("canceled") ||
+    message.includes("cancelled") ||
+    message.includes("rejected") ||
+    message.includes("denied") ||
+    err.code === 4001
+  );
+}
+
 function extractFirstAddress(result: unknown): string | null {
   const payload =
     result &&
@@ -107,6 +124,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           );
           break;
         } catch (err) {
+          if (isUserCancelled(err)) {
+            setState((prev) => ({ ...prev, isConnecting: false }));
+            return;
+          }
           lastError = err;
         }
       }

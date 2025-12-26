@@ -6,8 +6,7 @@ import { useWallet } from "@/hooks/use-wallet";
 
 export function Navbar() {
   const { address } = useWallet();
-  const adminAddress = process.env.NEXT_PUBLIC_RECEIPT_ADMIN_ADDRESS ?? "";
-  const isAdmin = !!address && !!adminAddress && address === adminAddress;
+  const isConnected = !!address;
 
   return (
     <header className="border-b border-black bg-white">
@@ -31,18 +30,20 @@ export function Navbar() {
         <nav className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
           <Link
             href="/"
-            className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline">
+            className="rounded-full border border-black bg-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
             Activity
           </Link>
-          <Link
-            href="/me"
-            className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline">
-            Receipts
-          </Link>
-          {isAdmin && (
+          {isConnected && (
+            <Link
+              href="/me"
+              className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white">
+              Receipts
+            </Link>
+          )}
+          {isConnected && (
             <Link
               href="/admin"
-              className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline">
+              className="rounded-full border border-black bg-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
               Admin
             </Link>
           )}
