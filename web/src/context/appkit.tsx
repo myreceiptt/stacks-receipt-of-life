@@ -2,7 +2,22 @@
 
 import type { ReactNode } from "react";
 import { createAppKit } from "@reown/appkit/react";
-import { networks, projectId } from "@/lib/reown-stacks";
+import { BitcoinAdapter } from "@reown/appkit-adapter-bitcoin";
+import {
+  bitcoin,
+  bitcoinTestnet,
+  bitcoinSignet,
+} from "@reown/appkit/networks";
+
+const projectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID;
+
+if (!projectId) {
+  // We don't throw here to avoid breaking the app in local/dev,
+  // but we log so the dev knows why the AppKit button might not work.
+  console.warn(
+    "Reown AppKit: NEXT_PUBLIC_REOWN_PROJECT_ID is not set. AppKit will not be initialized."
+  );
+}
 
 const metadata = {
   name: "Stacks Receipt of Life",
@@ -12,9 +27,12 @@ const metadata = {
 };
 
 if (projectId) {
+  const bitcoinAdapter = new BitcoinAdapter({ projectId });
+
   createAppKit({
+    adapters: [bitcoinAdapter],
     metadata,
-    networks,
+    networks: [bitcoin, bitcoinTestnet, bitcoinSignet],
     projectId,
     features: {
       analytics: true,
