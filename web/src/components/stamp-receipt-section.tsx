@@ -81,124 +81,162 @@ export function StampReceiptSection() {
     txId && `https://explorer.stacks.co/txid/${txId}?chain=mainnet`;
 
   return (
-    <main className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-neutral-600">
-          Stamp a receipt
-        </p>
-        <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
-          Write and stamp one sentence that feels like a receipt for how you
-          live today. When you stamp it, it will submit a transaction to the{" "}
-          <span className="font-medium">$MyReceipt</span> contract secured by
-          Bitcoin via Stacks mainnet—either for yourself or as a gift to someone
-          out there.
-        </p>
-      </div>
-
+    <>
       {!address && (
         <div className="rounded-md border border-dashed border-black bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
           Connect your Stacks wallet in the navbar above to stamp your receipt.
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-3 rounded-xl border border-black bg-white p-4 sm:p-6">
-        <div className="space-y-2">
-          <label className="text-xs font-medium uppercase tracking-[0.18em]">
-            Your receipt
-          </label>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            maxLength={maxChars + 40} // hard cap safeguard
-            className="w-full resize-none border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-            placeholder="I am living like someone who..."
-          />
-          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
-            <span>
-              {address
-                ? "This will be stored on-chain and linked to your STX address."
-                : "Connect wallet to stamp your receipt on-chain."}
-            </span>
-            <span className={isOverLimit ? "text-red-600" : ""}>
-              {remaining} chars left
-            </span>
+      {address && (
+        <div className="space-y-4">
+          <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
+            Write a statement that feels like a receipt for how you live
+            today—either for yourself or as a gift to someone out there. When
+            stamped, a transaction is submitted to the contract on Stacks
+            mainnet.
+          </p>
+
+          <div className="flex flex-wrap gap-2 text-[11px]">
+            <button
+              type="button"
+              // onClick={() => setActiveTab("activity")}
+              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] border-black bg-white`}>
+              Activity
+            </button>
+            <button
+              type="button"
+              // onClick={() => setActiveTab("stamp")}
+              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] border-black bg-black text-white`}>
+              Stamp
+            </button>
+          </div>
+
+          <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+            <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+              Stamp a Receipt
+            </p>
+
+            {/* {loadingActivity && ( */}
+            {/* <p className="text-sm text-neutral-700"> */}
+            {/* Loading on-chain data... */}
+            {/* </p> */}
+            {/* )} */}
+
+            {/* {dataError && <p className="text-sm text-red-700">{dataError}</p>} */}
+
+            <div className="space-y-4 text-sm text-neutral-800">
+              <div className="space-y-2">
+                <span className="font-semibold">Write Your Receipt:</span>
+                <span className="font-mono wrap-break-word"></span>
+                <p className="text-xs text-neutral-600">
+                  Use a variety of characters, but limit to 160 characters.
+                </p>
+                <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] tracking-[0.18em]">
+                      YOUR RECEIPT
+                    </label>
+                    <textarea
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      rows={3}
+                      maxLength={maxChars + 40} // hard cap safeguard
+                      className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                      placeholder="I am living like someone who..."
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
+                    <span>
+                      This will be stored on-chain and linked to your STX
+                      address.
+                    </span>
+                    <span className={isOverLimit ? "text-red-600" : ""}>
+                      {remaining} chars left
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-neutral-700">
+                    <button
+                      type="button"
+                      onClick={() => setIsGift(false)}
+                      className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
+                        !isGift
+                          ? "border-black bg-black text-white"
+                          : "border-black bg-white"
+                      }`}>
+                      For me
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsGift(true)}
+                      className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
+                        isGift
+                          ? "border-black bg-black text-white"
+                          : "border-black bg-white"
+                      }`}>
+                      As a gift
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="flex flex-wrap items-center gap-2 text-[11px] text-neutral-700">
+      <main className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-3 rounded-xl border border-black bg-white p-4 sm:p-6">
+          {isGift && (
+            <div className="space-y-1">
+              <label className="text-xs font-medium uppercase tracking-[0.18em]">
+                Recipient Stacks address
+              </label>
+              <input
+                type="text"
+                value={recipientAddress}
+                onChange={(e) => setRecipientAddress(e.target.value)}
+                placeholder="SB... or SP..."
+                className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+              />
+              {recipientError && (
+                <p className="text-[11px] text-red-700">{recipientError}</p>
+              )}
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {error}
+            </div>
+          )}
+
+          {txId && explorerUrl && (
+            <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs text-neutral-800">
+              <div className="font-semibold">Receipt stamped.</div>
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="underline">
+                View transaction on Stacks Explorer
+              </a>
+            </div>
+          )}
+
           <button
-            type="button"
-            onClick={() => setIsGift(false)}
-            className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-              !isGift
-                ? "border-black bg-black text-white"
-                : "border-black bg-white"
-            }`}>
-            For me
+            type="submit"
+            disabled={isSubmitting || !address || isOverLimit}
+            className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
+            {isSubmitting
+              ? "Stamping..."
+              : isGift
+              ? "Stamp as gift"
+              : "Stamp for me"}
           </button>
-          <button
-            type="button"
-            onClick={() => setIsGift(true)}
-            className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-              isGift
-                ? "border-black bg-black text-white"
-                : "border-black bg-white"
-            }`}>
-            As a gift
-          </button>
-        </div>
-
-        {isGift && (
-          <div className="space-y-1">
-            <label className="text-xs font-medium uppercase tracking-[0.18em]">
-              Recipient Stacks address
-            </label>
-            <input
-              type="text"
-              value={recipientAddress}
-              onChange={(e) => setRecipientAddress(e.target.value)}
-              placeholder="SB... or SP..."
-              className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-            />
-            {recipientError && (
-              <p className="text-[11px] text-red-700">{recipientError}</p>
-            )}
-          </div>
-        )}
-
-        {error && (
-          <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
-            {error}
-          </div>
-        )}
-
-        {txId && explorerUrl && (
-          <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs text-neutral-800">
-            <div className="font-semibold">Receipt stamped.</div>
-            <a
-              href={explorerUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="underline">
-              View transaction on Stacks Explorer
-            </a>
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={isSubmitting || !address || isOverLimit}
-          className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
-          {isSubmitting
-            ? "Stamping..."
-            : isGift
-            ? "Stamp as gift"
-            : "Stamp for me"}
-        </button>
-      </form>
-    </main>
+        </form>
+      </main>
+    </>
   );
 }

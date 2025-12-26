@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWallet } from "@/hooks/use-wallet";
 import {
   getVersion,
@@ -80,7 +80,7 @@ export default function AdminPage() {
     "contract"
   );
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     if (!address) return;
     setLoadingData(true);
     setIsRefreshing(true);
@@ -107,12 +107,12 @@ export default function AdminPage() {
       setLoadingData(false);
       setIsRefreshing(false);
     }
-  };
+  }, [address]);
 
   useEffect(() => {
     if (!address) return;
     handleRefresh();
-  }, [address]);
+  }, [address, handleRefresh]);
 
   const effectiveAdmin = useMemo(() => {
     if (version?.major === 2 && config?.admin) return config.admin;
@@ -239,8 +239,9 @@ export default function AdminPage() {
         <div className="space-y-4">
           <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
             You can review the contract details, see the latest on-chain stats,
-            and, if you're the admin, update fees or change the admin address.
-            This page keeps settings and status transparent and up to date.
+            and, if you&apos;re the admin, update fees or change the admin
+            address. This page keeps settings and status transparent and up to
+            date.
           </p>
 
           <div className="flex flex-wrap gap-2 text-[11px]">
@@ -559,6 +560,18 @@ export default function AdminPage() {
                           className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
                         />
                       </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
+                        <span>
+                          This will be stored on-chain and linked to your STX
+                          address.
+                        </span>
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isUpdatingFees}
+                        className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
+                        {isUpdatingFees ? "Updating…" : "Update Fees"}
+                      </button>
                       {feeError && (
                         <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
                           {feeError}
@@ -569,12 +582,6 @@ export default function AdminPage() {
                           {feeMessage}
                         </div>
                       )}
-                      <button
-                        type="submit"
-                        disabled={isUpdatingFees}
-                        className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
-                        {isUpdatingFees ? "Updating…" : "Update Fees"}
-                      </button>
                     </form>
                   </div>
 
@@ -601,6 +608,12 @@ export default function AdminPage() {
                           placeholder="S..."
                           className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
                         />
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
+                        <span>
+                          This will be stored on-chain and linked to your STX
+                          address.
+                        </span>
                       </div>
                       {adminError && (
                         <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
