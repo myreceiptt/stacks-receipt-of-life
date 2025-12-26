@@ -2,7 +2,7 @@
 
 import { useWallet } from "@/hooks/use-wallet";
 import { useAppKit, useAppKitAccount, useDisconnect } from "@reown/appkit/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function ConnectWalletButton() {
   const { address, isConnecting, connect, disconnect } = useWallet();
@@ -18,6 +18,43 @@ export function ConnectWalletButton() {
     ? `${activeAddress.slice(0, 6)}…${activeAddress.slice(-4)}`
     : "Connect wallet";
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const styleId = "stacks-connect-backdrop";
+    const applyBackdrop = (modal: Element) => {
+      const shadow = (modal as HTMLElement).shadowRoot;
+      if (!shadow || shadow.getElementById(styleId)) return;
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = `
+        .modal-container {
+          background: rgba(0, 0, 0, 0.50) !important;
+          backdrop-filter: blur(8px) !important;
+        }
+      `;
+      shadow.appendChild(style);
+    };
+
+    document.querySelectorAll("connect-modal").forEach(applyBackdrop);
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (!(node instanceof HTMLElement)) continue;
+          if (node.tagName.toLowerCase() === "connect-modal") {
+            applyBackdrop(node);
+            continue;
+          }
+          node.querySelectorAll?.("connect-modal").forEach(applyBackdrop);
+        }
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
       <button
@@ -28,7 +65,7 @@ export function ConnectWalletButton() {
       </button>
       {isModalOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(230,230,230,0.5)] backdrop-blur-[8px] px-4 dark:bg-[rgba(0,0,0,0.5)]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.50)] backdrop-blur-[8px] px-4"
           onClick={() => setModalOpen(false)}
         >
           <div
