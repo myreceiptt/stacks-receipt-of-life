@@ -6,175 +6,154 @@ import {
   useState,
   useCallback,
   useEffect,
-  ReactNode,
+  type ReactNode,
 } from "react";
-import type { UniversalConnector } from "@reown/appkit-universal-connector";
-import { getUniversalConnector } from "@/lib/reown";
 
 type WalletState = {
   address: string | null;
   isConnecting: boolean;
+};
+
+type WalletContextValue = {
+  address: string | null;
+  isConnecting: boolean;
   connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
-  isConnected?: boolean;
+  disconnect: () => void;
 };
 
-const WalletContext = createContext<WalletState | undefined>(undefined);
+const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "wallet:stx-address";
+const STORAGE_KEY = "stacks.wallet.address";
 
-type StacksSession = {
-  namespaces?: {
-    stacks?: {
-      accounts?: string[];
-    };
+function extractFirstAddress(result: unknown): string | null {
+  const payload =
+    result &&
+    typeof result === "object" &&
+    "result" in (result as Record<string, unknown>)
+      ? (result as Record<string, unknown>).result
+      : result;
+
+  const pick = (obj: Record<string, unknown> | null): string | null => {
+    if (!obj) return null;
+    return (
+      (obj as { address?: string })?.address ??
+      (obj as { stxAddress?: string })?.stxAddress ??
+      (obj as { addresses?: { stx?: Array<{ address?: string }> } })?.addresses
+        ?.stx?.[0]?.address ??
+      (obj as { address?: { testnet?: string; mainnet?: string } })?.address
+        ?.testnet ??
+      (obj as { address?: { testnet?: string; mainnet?: string } })?.address
+        ?.mainnet ??
+      null
+    );
   };
-};
 
-function extractStacksAddress(session: unknown): string | null {
-  const stacksAccounts: string[] | undefined =
-    typeof session === "object" && session !== null
-      ? (session as StacksSession).namespaces?.stacks?.accounts
-      : undefined;
-
-  if (!stacksAccounts || stacksAccounts.length === 0) {
-    return null;
+  if (
+    payload &&
+    typeof payload === "object" &&
+    Array.isArray((payload as { addresses?: unknown }).addresses)
+  ) {
+    const addrArray = (payload as { addresses?: Array<Record<string, unknown>> })
+      .addresses;
+    const stxEntry =
+      addrArray?.find((item) => item?.symbol === "STX" && item.address) ??
+      addrArray?.[0];
+    if (stxEntry && typeof stxEntry === "object") {
+      const addr = pick(stxEntry as Record<string, unknown>);
+      if (addr) return addr;
+      if ("address" in stxEntry && typeof stxEntry.address === "string") {
+        return stxEntry.address;
+      }
+    }
   }
 
-  const first = stacksAccounts[0];
-  const parts = first.split(":");
-  return parts[2] ?? null;
+  if (Array.isArray(payload) && payload.length > 0) {
+    const first = payload[0];
+    if (typeof first === "string") return first;
+    if (typeof first === "object" && first !== null) {
+      return pick(first as Record<string, unknown>);
+    }
+  }
+  if (typeof payload === "object" && payload !== null) {
+    return pick(payload as Record<string, unknown>);
+  }
+  return null;
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [universalConnector, setUniversalConnector] =
-    useState<UniversalConnector | null>(null);
-  const [session, setSession] = useState<StacksSession | null>(null);
   const [state, setState] = useState<WalletState>({
     address: null,
     isConnecting: false,
-    connect: async () => {},
-    disconnect: async () => {},
   });
 
-  useEffect(() => {
-    let isMounted = true;
-
-    getUniversalConnector()
-      .then((connector) => {
-        if (!isMounted) return;
-        setUniversalConnector(connector);
-
-        const existingSession = connector.provider.session;
-        if (existingSession) {
-          setSession(existingSession as StacksSession);
-          const address = extractStacksAddress(existingSession);
-          setState((prev) => ({
-            ...prev,
-            address,
-            isConnecting: false,
-            ...(typeof prev.isConnected === "boolean"
-              ? { isConnected: !!address }
-              : {}),
-          }));
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to init universal connector", err);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   const connect = useCallback(async () => {
-    if (!universalConnector) return;
-    if (session) {
-      const address = extractStacksAddress(session);
-      setState((prev) => ({
-        ...prev,
-        address,
-        isConnecting: false,
-        ...(typeof prev.isConnected === "boolean"
-          ? { isConnected: !!address }
-          : {}),
-      }));
-      return;
-    }
+    if (typeof window === "undefined") return;
 
-    setState((prev) => ({
-      ...prev,
-      isConnecting: true,
-    }));
+    setState((prev) => ({ ...prev, isConnecting: true }));
 
     try {
-      const { session: providerSession } =
-        await universalConnector.connect();
+      const { request: stacksRequest } = await import("@stacks/connect");
 
-      setSession(providerSession as StacksSession);
+      const preferred = ["getAddresses", "stx_getAddresses", "stx_getAccounts"];
+      let lastError: unknown = null;
+      let result: unknown = null;
 
-      const address = extractStacksAddress(providerSession);
-
-      setState((prev) => ({
-        ...prev,
-        address,
-        isConnecting: false,
-        ...(typeof prev.isConnected === "boolean"
-          ? { isConnected: !!address }
-          : {}),
-      }));
-
-      try {
-        if (address) {
-          window.localStorage.setItem(STORAGE_KEY, address);
-        } else {
-          window.localStorage.removeItem(STORAGE_KEY);
+      for (let i = 0; i < preferred.length; i++) {
+        const method = preferred[i];
+        try {
+          result = await stacksRequest(
+            { forceWalletSelect: i === 0 },
+            method as "getAddresses"
+          );
+          break;
+        } catch (err) {
+          lastError = err;
         }
+      }
+
+      if (result === null) {
+        throw lastError ?? new Error("Wallet did not return any addresses.");
+      }
+
+      const stxAddress = extractFirstAddress(result);
+      if (!stxAddress) {
+        throw new Error("Could not determine Stacks address from wallet.");
+      }
+
+      setState({ address: stxAddress, isConnecting: false });
+      try {
+        window.localStorage.setItem(STORAGE_KEY, stxAddress);
       } catch {
         // ignore storage errors
       }
     } catch (error) {
       console.error("Wallet connection failed", error);
-      setState((prev) => ({
-        ...prev,
-        address: null,
-        isConnecting: false,
-        ...(typeof prev.isConnected === "boolean"
-          ? { isConnected: false }
-          : {}),
-      }));
+      setState({ address: null, isConnecting: false });
     }
-  }, [session, universalConnector]);
+  }, []);
 
-  const disconnect = useCallback(async () => {
-    try {
-      if (universalConnector) {
-        await universalConnector.disconnect();
-      }
-    } catch (err) {
-      console.error("Error disconnecting universal connector", err);
-    }
-
+  const disconnect = useCallback(() => {
     try {
       window.localStorage.removeItem(STORAGE_KEY);
     } catch {
       // ignore
     }
+    setState({ address: null, isConnecting: false });
+  }, []);
 
-    setSession(null);
-    setState((prev) => ({
-      ...prev,
-      address: null,
-      isConnecting: false,
-      ...(typeof prev.isConnected === "boolean" ? { isConnected: false } : {}),
-    }));
-  }, [universalConnector]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const cached = window.localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      setState({ address: cached, isConnecting: false });
+    }
+  }, []);
 
   return (
     <WalletContext.Provider
       value={{
-        ...state,
+        address: state.address,
+        isConnecting: state.isConnecting,
         connect,
         disconnect,
       }}
