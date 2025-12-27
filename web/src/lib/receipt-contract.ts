@@ -25,6 +25,8 @@ type StacksRequestFn = (
   params: StacksRequestParams
 ) => Promise<unknown>;
 
+const INSTALLED_WALLET_STORAGE_KEY = "stacks.wallet.address";
+
 let stacksConnector: UniversalConnector | null = null;
 
 async function getConnector(): Promise<UniversalConnector> {
@@ -38,6 +40,19 @@ async function loadStacksRequest(): Promise<StacksRequestFn> {
   // Server should never call wallet; throw early
   if (typeof window === "undefined") {
     throw new Error("Wallet request attempted on the server.");
+  }
+
+  const hasInstalledWallet = (() => {
+    try {
+      return !!window.localStorage.getItem(INSTALLED_WALLET_STORAGE_KEY);
+    } catch {
+      return false;
+    }
+  })();
+
+  if (hasInstalledWallet) {
+    const mod = await import("@stacks/connect");
+    return mod.request;
   }
 
   const connector = await getConnector();
