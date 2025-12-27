@@ -28,24 +28,26 @@ export function Navbar() {
         </Link>
 
         <nav className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
-          <Link
-            href="/"
-            className="rounded-full border border-black bg-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
-            Activity
-          </Link>
           {isConnected && (
-            <Link
-              href="/me"
-              className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white">
-              Receipts
-            </Link>
-          )}
-          {isConnected && (
-            <Link
-              href="/admin"
-              className="rounded-full border border-black bg-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
-              Admin
-            </Link>
+            <>
+              <Link
+                href="/"
+                className="rounded-full border border-black bg-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
+                Stamp
+              </Link>
+
+              <Link
+                href="/me"
+                className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white">
+                Receipts
+              </Link>
+
+              <Link
+                href="/admin"
+                className="rounded-full border border-black bg-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
+                Admin
+              </Link>
+            </>
           )}
           <ConnectWalletButton />
         </nav>

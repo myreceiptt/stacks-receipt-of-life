@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWallet } from "@/hooks/use-wallet";
+import { useAppKitAccount } from "@reown/appkit/react";
 import { ContractTab } from "@/components/tab/contract";
 import { StatusTab } from "@/components/tab/status";
 import { UpdateTab } from "@/components/tab/update";
@@ -29,6 +30,8 @@ const contractId =
 
 export default function AdminPage() {
   const { address } = useWallet();
+  const { address: wcAddress } = useAppKitAccount({ namespace: "stacks" });
+  const activeAddress = address ?? wcAddress ?? null;
 
   const envAdmin = process.env.NEXT_PUBLIC_RECEIPT_ADMIN_ADDRESS ?? "";
   const envStampFee = Number(
@@ -84,10 +87,14 @@ export default function AdminPage() {
   );
 
   const handleRefresh = useCallback(async () => {
-    if (!address) return;
+    if (!activeAddress) return;
     setLoadingData(true);
     setIsRefreshing(true);
     setDataError(null);
+    setFeeError(null);
+    setFeeMessage(null);
+    setAdminError(null);
+    setAdminMessage(null);
     try {
       const [ver, cfg, st] = await Promise.all([
         getVersion(),
@@ -110,12 +117,12 @@ export default function AdminPage() {
       setLoadingData(false);
       setIsRefreshing(false);
     }
-  }, [address]);
+  }, [activeAddress]);
 
   useEffect(() => {
-    if (!address) return;
+    if (!activeAddress) return;
     handleRefresh();
-  }, [address, handleRefresh]);
+  }, [activeAddress, handleRefresh]);
 
   const effectiveAdmin = useMemo(() => {
     if (version?.major === 2 && config?.admin) return config.admin;
@@ -123,8 +130,8 @@ export default function AdminPage() {
   }, [version?.major, config?.admin, envAdmin]);
 
   const isAdmin = useMemo(() => {
-    return !!address && !!effectiveAdmin && address === effectiveAdmin;
-  }, [address, effectiveAdmin]);
+    return !!activeAddress && !!effectiveAdmin && activeAddress === effectiveAdmin;
+  }, [activeAddress, effectiveAdmin]);
 
   const handleSubmitFees = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,12 +204,12 @@ export default function AdminPage() {
             <p className="text-xs uppercase tracking-[0.25em] text-neutral-600">
               Admin · config + stats
             </p>
-            {!address && (
+            {!activeAddress && (
               <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
                 Connect to View Admin Info.
               </h1>
             )}
-            {address && (
+            {activeAddress && (
               <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
                 Your Admin Dashboard.
               </h1>
@@ -210,15 +217,15 @@ export default function AdminPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            {address && (
+            {activeAddress && (
               <span className="rounded-full border border-black bg-white px-3 py-1 font-mono">
-                {address.slice(0, 8)}…{address.slice(-4)}
+                {activeAddress.slice(0, 8)}…{activeAddress.slice(-4)}
               </span>
             )}
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={!address || loadingData}
+              disabled={!activeAddress || loadingData}
               className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40">
               {isRefreshing || loadingData ? "Refreshing…" : "Refresh"}
             </button>
@@ -232,13 +239,13 @@ export default function AdminPage() {
         </p>
       </header>
 
-      {!address && (
+      {!activeAddress && (
         <div className="rounded-md border border-dashed border-black bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
           Connect your Stacks wallet in the navbar to see admin info.
         </div>
       )}
 
-      {address && (
+      {activeAddress && (
         <div className="space-y-4">
           <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
             You can review the contract details, see the latest on-chain stats,
@@ -309,7 +316,7 @@ export default function AdminPage() {
               config={config}
               stats={stats}
               isAdmin={isAdmin}
-              address={address}
+              address={activeAddress}
               feeStampInput={feeStampInput}
               feeRoyaltyInput={feeRoyaltyInput}
               feeError={feeError}
