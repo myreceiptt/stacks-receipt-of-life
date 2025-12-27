@@ -172,16 +172,19 @@ export default function HomePage() {
     const normalized = hex.startsWith("0x") ? hex : `0x${hex}`;
     try {
       const json = cvToJSON(hexToCV(normalized));
-      if (
-        json &&
-        typeof json === "object" &&
-        "type" in json &&
-        "value" in json &&
-        (json as { type: string }).type === "uint"
-      ) {
-        const value = (json as { value: string }).value;
-        const parsed = Number(value);
-        return Number.isNaN(parsed) ? undefined : parsed;
+      if (json && typeof json === "object" && "type" in json) {
+        const typed = json as { type: string; value?: unknown };
+        if (typed.type.includes("response") && typed.value) {
+          const inner = typed.value as { type?: string; value?: unknown };
+          if (inner?.type === "uint" && typeof inner.value === "string") {
+            const parsed = Number(inner.value);
+            return Number.isNaN(parsed) ? undefined : parsed;
+          }
+        }
+        if (typed.type === "uint" && typeof typed.value === "string") {
+          const parsed = Number(typed.value);
+          return Number.isNaN(parsed) ? undefined : parsed;
+        }
       }
     } catch (err) {
       console.error("Failed to decode tx result", err);
@@ -258,13 +261,14 @@ export default function HomePage() {
               } as Gift to ${shortenAddress(recipient)}`;
             }
           } else if (functionName === "transfer-receipt") {
+            const transferId = idArg ?? receiptId ?? "?";
             if (recipient === activeAddress && sender !== activeAddress) {
               label = `Receive Receipt ID ${
-                receiptId ?? "?"
+                transferId
               } from ${shortenAddress(sender)}`;
             } else {
               label = `Transfer Receipt ID ${
-                receiptId ?? "?"
+                transferId
               } to ${shortenAddress(recipient)}`;
             }
           } else if (functionName === "set-receipt-royalty-recipient") {
