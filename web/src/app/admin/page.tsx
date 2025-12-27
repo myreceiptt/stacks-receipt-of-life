@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWallet } from "@/hooks/use-wallet";
+import { ContractTab } from "@/components/tab/contract";
+import { StatusTab } from "@/components/tab/status";
+import { UpdateTab } from "@/components/tab/update";
 import {
   getVersion,
   getConfig,
@@ -278,373 +281,51 @@ export default function AdminPage() {
           </div>
 
           {activeTab === "contract" && (
-            <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
-              <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
-                Contract Version
-              </p>
-
-              {loadingData && (
-                <p className="text-sm text-neutral-700">
-                  Loading on-chain data...
-                </p>
-              )}
-
-              {dataError && <p className="text-sm text-red-700">{dataError}</p>}
-
-              {!loadingData && !dataError && version && config && stats ? (
-                <div className="space-y-4 text-sm text-neutral-800">
-                  <div className="space-y-2">
-                    <span className="font-semibold">Contract Version:</span>{" "}
-                    <span className="font-mono wrap-break-word">
-                      {version
-                        ? `v${version.major}.${version.minor}.${version.patch}`
-                        : "Version information not available."}
-                    </span>
-                    <p className="text-xs text-neutral-600">
-                      {version && version.major === 2
-                        ? "Active contract: Receipt of Life v2.x (Stacks mainnet)."
-                        : version && version.major === 1
-                        ? "Legacy contract: v1.x. This UI uses v2 for normal flows."
-                        : "Unable to determine contract version; please verify env and deployment."}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="font-semibold">Known Limitation:</span>{" "}
-                    <span className="font-mono wrap-break-word">
-                      STX self-transfer issue.
-                    </span>
-                    <p className="text-xs text-neutral-600">
-                      v1 can still fail when sender == recipient for fees. Avoid
-                      stamping or transferring when the fee recipient equals the
-                      sender (e.g. admin stamping to treasury, or owner =
-                      royalty-recipient).
-                    </p>
-                    <p className="text-xs text-neutral-600">
-                      v2 mitigates self-transfer: STAMP-FEE skipped when fee = 0
-                      or tx-sender = TREASURY; ROYALTY-FEE skipped when fee = 0
-                      or tx-sender = royalty-recipient.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="font-semibold">V2 Contract ID:</span>{" "}
-                    <span className="font-mono wrap-break-word">
-                      {contractId}
-                    </span>
-                    <p className="text-xs text-neutral-600">
-                      v2.x is currently used contract. Integrations should
-                      target v2 (`receipt-of-life-v2`) for all features and fee
-                      safety.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="font-semibold">V1 Contract ID:</span>{" "}
-                    <span className="font-mono wrap-break-word">
-                      SP29ECHHQ6F9344SGGGRGDPTPFPTXA3GHXK28KCWH.receipt-of-life
-                    </span>
-                    <p className="text-xs text-neutral-600">
-                      v1.x is considered a legacy contract and is not used by
-                      this dApp UI (read-only reference).
-                    </p>
-                  </div>
-                </div>
-              ) : null}
-
-              {!loadingData &&
-                !dataError &&
-                (!version || (!config && !stats)) && (
-                  <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-                    Unable to load on-chain contract version. Verify the
-                    contract address/name and network.
-                  </div>
-                )}
-            </div>
+            <ContractTab
+              version={version}
+              contractId={contractId}
+              loadingData={loadingData}
+              dataError={dataError}
+              config={config}
+              stats={stats}
+            />
           )}
 
           {activeTab === "status" && (
-            <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
-              <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
-                Contract Stats
-              </p>
-
-              {loadingData && (
-                <p className="text-sm text-neutral-700">
-                  Loading on-chain data...
-                </p>
-              )}
-
-              {dataError && <p className="text-sm text-red-700">{dataError}</p>}
-
-              {!loadingData &&
-              !dataError &&
-              version &&
-              version.major === 2 &&
-              config &&
-              stats ? (
-                <div className="space-y-4 text-sm text-neutral-800">
-                  <div className="space-y-2">
-                    <span className="font-semibold">Owner Address:</span>{" "}
-                    <span className="font-mono wrap-break-word">
-                      {config.contractOwner}
-                    </span>
-                    <p className="text-xs text-neutral-600">
-                      Address of Prof. NOTA v11.11 - myreceipt.btc
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="font-semibold">Treasury Address:</span>{" "}
-                    <span className="font-mono wrap-break-word">
-                      {config.treasury}
-                    </span>
-                    <p className="text-xs text-neutral-600">
-                      Address of Prof. NOTA v11.11 - myreceipt.btc
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="font-semibold">Admin Address:</span>{" "}
-                    <span className="font-mono wrap-break-word">
-                      {config.admin}
-                    </span>
-                    <p className="text-xs text-neutral-600">
-                      Address of Prof. NOTA v11.11 - myreceipt.btc
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="font-semibold">STAMP-FEE:</span>{" "}
-                    <span className="font-mono wrap-break-word">
-                      {config.stampFee} µSTX (≈ {config.stampFee / 1_000_000}{" "}
-                      STX)
-                    </span>
-                    <p className="text-xs text-neutral-600">
-                      Just a requirement to grow economic value on the Stacks
-                      blockchain.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="font-semibold">ROYALTY-FEE:</span>{" "}
-                    <span className="font-mono wrap-break-word">
-                      {config.royaltyFee} µSTX (≈{" "}
-                      {config.royaltyFee / 1_000_000} STX)
-                    </span>
-                    <p className="text-xs text-neutral-600">
-                      The growth of economic value on the Stacks blockchain must
-                      be followed by your growth as well.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="font-semibold">Current Stats:</span>{" "}
-                    <span className="font-mono wrap-break-word">
-                      {new Date().toLocaleString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    <p className="text-xs text-neutral-600">
-                      Stats do not change in real time. Please refresh to update
-                      the stats.
-                    </p>
-                    <p className="text-xs text-neutral-600">
-                      <code>last-id</code>: {stats.lastId};
-                    </p>
-                    <p className="text-xs text-neutral-600">
-                      <code>total-submissions</code>: {stats.totalSubmissions}
-                    </p>
-                    <p className="text-xs text-neutral-600">
-                      <code>total-transfers</code>: {stats.totalTransfers}
-                    </p>
-                    <p className="text-xs text-neutral-600">
-                      <code>total-stamp-fee</code>: {stats.totalStampFee} µSTX
-                      (≈ {stats.totalStampFee / 1_000_000} STX)
-                    </p>
-                    <p className="text-xs text-neutral-600">
-                      <code>total-royalty-fee</code>: {stats.totalRoyaltyFee}{" "}
-                      µSTX (≈ {stats.totalRoyaltyFee / 1_000_000} STX)
-                    </p>
-                  </div>
-                </div>
-              ) : null}
-
-              {!loadingData && !dataError && version && version.major === 1 && (
-                <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-                  Legacy contract detected (v1.x). This UI uses v2 for normal
-                  flows; v1 data shown here is informational only.
-                </div>
-              )}
-
-              {!loadingData &&
-                !dataError &&
-                (!version || (!config && !stats)) && (
-                  <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-                    Unable to load on-chain contract stats. Verify the contract
-                    address/name and network.
-                  </div>
-                )}
-            </div>
+            <StatusTab
+              loadingData={loadingData}
+              dataError={dataError}
+              version={version}
+              config={config}
+              stats={stats}
+            />
           )}
 
           {activeTab === "update" && (
-            <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
-              <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
-                Update Contract
-              </p>
-
-              {loadingData && (
-                <p className="text-sm text-neutral-700">
-                  Loading on-chain data...
-                </p>
-              )}
-
-              {dataError && <p className="text-sm text-red-700">{dataError}</p>}
-
-              {!loadingData &&
-              !dataError &&
-              version &&
-              config &&
-              stats &&
-              !isAdmin ? (
-                <p className="text-sm text-neutral-700">
-                  You&apos;re connected as{" "}
-                  <span className="font-semibold">{shorten(address)}</span>, but
-                  this is not the admin address. Only the admin can run on-chain
-                  actions.
-                </p>
-              ) : null}
-
-              {!loadingData &&
-              !dataError &&
-              version &&
-              config &&
-              stats &&
-              isAdmin ? (
-                <div className="space-y-4 text-sm text-neutral-800">
-                  <div className="space-y-2">
-                    <span className="font-semibold">
-                      Update Fees (on-chain):
-                    </span>{" "}
-                    <span className="font-mono wrap-break-word"></span>
-                    <p className="text-xs text-neutral-600">
-                      Values are in microSTX (µSTX); 1 STX = 1,000,000 µSTX.
-                    </p>
-                    <form
-                      onSubmit={handleSubmitFees}
-                      className="space-y-3 text-sm">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[11px] tracking-[0.18em]">
-                          STAMP-FEE (µSTX)
-                        </label>
-                        <input
-                          type="text"
-                          value={feeStampInput}
-                          onChange={(e) => setFeeStampInput(e.target.value)}
-                          className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[11px] tracking-[0.18em]">
-                          ROYALTY-FEE (µSTX)
-                        </label>
-                        <input
-                          type="text"
-                          value={feeRoyaltyInput}
-                          onChange={(e) => setFeeRoyaltyInput(e.target.value)}
-                          className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-                        />
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
-                        <span>
-                          This will be stored on-chain and linked to your STX
-                          address.
-                        </span>
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={isUpdatingFees}
-                        className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
-                        {isUpdatingFees ? "Updating…" : "Update Fees"}
-                      </button>
-                      {feeError && (
-                        <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
-                          {feeError}
-                        </div>
-                      )}
-                      {feeMessage && (
-                        <div className="rounded-md border border-green-500 bg-green-50 px-3 py-2 text-xs text-green-700">
-                          {feeMessage}
-                        </div>
-                      )}
-                    </form>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="font-semibold">
-                      Change Admin (on-chain):
-                    </span>{" "}
-                    <span className="font-mono wrap-break-word"></span>
-                    <p className="text-xs text-neutral-600">
-                      Must be a valid Stacks address (starts with
-                      &quot;S&quot;).
-                    </p>
-                    <form
-                      onSubmit={handleSubmitAdmin}
-                      className="space-y-3 text-sm">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[11px] uppercase tracking-[0.18em]">
-                          New admin address
-                        </label>
-                        <input
-                          type="text"
-                          value={newAdminInput}
-                          onChange={(e) => setNewAdminInput(e.target.value)}
-                          placeholder="S..."
-                          className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-                        />
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
-                        <span>
-                          This will be stored on-chain and linked to your STX
-                          address.
-                        </span>
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={isUpdatingAdmin}
-                        className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
-                        {isUpdatingAdmin ? "Updating…" : "Change Admin"}
-                      </button>
-                      {adminError && (
-                        <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
-                          {adminError}
-                        </div>
-                      )}
-                      {adminMessage && (
-                        <div className="rounded-md border border-green-500 bg-green-50 px-3 py-2 text-xs text-green-700">
-                          {adminMessage}
-                        </div>
-                      )}
-                    </form>
-                  </div>
-                </div>
-              ) : null}
-
-              {!loadingData &&
-                !dataError &&
-                (!version || (!config && !stats)) && (
-                  <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-                    Unable to load on-chain contract updaters. Verify the
-                    contract address/name and network.
-                  </div>
-                )}
-            </div>
+            <UpdateTab
+              loadingData={loadingData}
+              dataError={dataError}
+              version={version}
+              config={config}
+              stats={stats}
+              isAdmin={isAdmin}
+              address={address}
+              feeStampInput={feeStampInput}
+              feeRoyaltyInput={feeRoyaltyInput}
+              feeError={feeError}
+              feeMessage={feeMessage}
+              isUpdatingFees={isUpdatingFees}
+              newAdminInput={newAdminInput}
+              adminError={adminError}
+              adminMessage={adminMessage}
+              isUpdatingAdmin={isUpdatingAdmin}
+              onFeeStampChange={setFeeStampInput}
+              onFeeRoyaltyChange={setFeeRoyaltyInput}
+              onAdminChange={setNewAdminInput}
+              onSubmitFees={handleSubmitFees}
+              onSubmitAdmin={handleSubmitAdmin}
+              shorten={shorten}
+            />
           )}
         </div>
       )}
