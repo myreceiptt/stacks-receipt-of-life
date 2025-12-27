@@ -49,10 +49,16 @@ export function ContractTab({
       </p>
 
       {loadingData && (
-        <p className="text-sm text-neutral-700">Loading on-chain data...</p>
+        <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+          Loading on-chain data...
+        </div>
       )}
 
-      {dataError && <p className="text-sm text-red-700">{dataError}</p>}
+      {dataError && (
+        <div className="rounded-md border border-dashed border-red-400 bg-red-50 p-3 text-sm text-red-700">
+          {dataError}
+        </div>
+      )}
 
       {!loadingData && !dataError && version ? (
         <div className="space-y-4 text-sm text-neutral-800">

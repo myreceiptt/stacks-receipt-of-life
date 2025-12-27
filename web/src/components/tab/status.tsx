@@ -47,10 +47,16 @@ export function StatusTab({
       </p>
 
       {loadingData && (
-        <p className="text-sm text-neutral-700">Loading on-chain data...</p>
+        <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+          Loading on-chain data...
+        </div>
       )}
 
-      {dataError && <p className="text-sm text-red-700">{dataError}</p>}
+      {dataError && (
+        <div className="rounded-md border border-dashed border-red-400 bg-red-50 p-3 text-sm text-red-700">
+          {dataError}
+        </div>
+      )}
 
       {!loadingData &&
       !dataError &&
@@ -71,9 +77,7 @@ export function StatusTab({
 
           <div className="space-y-2">
             <span className="font-semibold">Treasury Address:</span>{" "}
-            <span className="font-mono wrap-break-word">
-              {config.treasury}
-            </span>
+            <span className="font-mono wrap-break-word">{config.treasury}</span>
             <p className="text-xs text-neutral-600">
               Address of Prof. NOTA v11.11 - myreceipt.btc
             </p>
@@ -93,7 +97,8 @@ export function StatusTab({
               {config.stampFee} µSTX (≈ {config.stampFee / 1_000_000} STX)
             </span>
             <p className="text-xs text-neutral-600">
-              Just a requirement to grow economic value on the Stacks blockchain.
+              Just a requirement to grow economic value on the Stacks
+              blockchain.
             </p>
           </div>
 
