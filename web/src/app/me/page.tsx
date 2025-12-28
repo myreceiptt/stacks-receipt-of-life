@@ -8,7 +8,6 @@ import {
   getOwnedReceiptsPaged,
   getCreatedReceiptsPaged,
   getRoyaltyReceiptsPaged,
-  getActivityReceiptsPaged,
   transferReceipt,
   setReceiptRoyaltyRecipient,
   type Receipt,
@@ -28,6 +27,7 @@ export default function MePage() {
   const [createdNextStart, setCreatedNextStart] = useState<bigint | null>(null);
   const [createdLoading, setCreatedLoading] = useState(false);
   const [createdLoadingMore, setCreatedLoadingMore] = useState(false);
+  const [createdError, setCreatedError] = useState<string | null>(null);
 
   const [royaltyReceipts, setRoyaltyReceipts] = useState<Receipt[]>([]);
   const [royaltyNextStart, setRoyaltyNextStart] = useState<bigint | null>(null);
@@ -35,18 +35,10 @@ export default function MePage() {
   const [royaltyLoadingMore, setRoyaltyLoadingMore] = useState(false);
   const [royaltyError, setRoyaltyError] = useState<string | null>(null);
 
-  const [activityReceipts, setActivityReceipts] = useState<Receipt[]>([]);
-  const [activityNextHighest, setActivityNextHighest] = useState<bigint | null>(
-    null
-  );
-  const [activityLoading, setActivityLoading] = useState(false);
-  const [activityLoadingMore, setActivityLoadingMore] = useState(false);
-  const [activityError, setActivityError] = useState<string | null>(null);
-
   const [totalOnChain, setTotalOnChain] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "owned" | "created" | "royalty" | "activity"
+    "owned" | "created" | "royalty"
   >("owned");
   const [transferInputs, setTransferInputs] = useState<Record<number, string>>(
     {}
@@ -76,14 +68,21 @@ export default function MePage() {
   const hasCreated = createdReceipts.length > 0;
   const hasTotal = typeof totalOnChain === "number" && totalOnChain > 0;
   const hasRoyalty = royaltyReceipts.length > 0;
-  const hasActivity = activityReceipts.length > 0;
-  const isLoading =
-    ownedLoading || createdLoading || royaltyLoading || activityLoading;
+  const isLoading = ownedLoading || createdLoading || royaltyLoading;
   const isRefreshing =
-    ownedLoadingMore ||
-    createdLoadingMore ||
-    royaltyLoadingMore ||
-    activityLoadingMore;
+    ownedLoadingMore || createdLoadingMore || royaltyLoadingMore;
+  const activeLoading =
+    activeTab === "owned"
+      ? ownedLoading
+      : activeTab === "created"
+      ? createdLoading
+      : royaltyLoading;
+  const activeRefreshing =
+    activeTab === "owned"
+      ? ownedLoadingMore
+      : activeTab === "created"
+      ? createdLoadingMore
+      : royaltyLoadingMore;
   const ownedPageSize = 10;
 
   const fetchOwnedWindow = useCallback(
@@ -142,7 +141,7 @@ export default function MePage() {
   const loadCreatedInitial = useCallback(async () => {
     if (!activeAddress) return;
     setCreatedLoading(true);
-    setError(null);
+    setCreatedError(null);
     try {
       const total = await getLastId();
       const { items, nextStartId } = await getCreatedReceiptsPaged(
@@ -155,7 +154,7 @@ export default function MePage() {
       setCreatedNextStart(nextStartId);
     } catch (err) {
       console.error(err);
-      setError("Failed to load receipts from Stacks mainnet.");
+      setCreatedError("Failed to load created receipts from Stacks mainnet.");
     } finally {
       setCreatedLoading(false);
     }
@@ -181,29 +180,20 @@ export default function MePage() {
     }
   }, [activeAddress]);
 
-  const loadActivityInitial = useCallback(async () => {
-    setActivityLoading(true);
-    setActivityError(null);
-    try {
-      const { items, nextHighestId } = await getActivityReceiptsPaged(null, 10);
-      setActivityReceipts(items);
-      setActivityNextHighest(nextHighestId);
-    } catch (err) {
-      console.error(err);
-      setActivityError("Failed to load activity from Stacks mainnet.");
-    } finally {
-      setActivityLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (!activeAddress) return;
     loadOwnedInitial();
-    loadCreatedInitial();
-  }, [activeAddress, loadOwnedInitial, loadCreatedInitial]);
+  }, [activeAddress, loadOwnedInitial]);
 
   useEffect(() => {
     if (!activeAddress) return;
+    if (
+      activeTab === "created" &&
+      createdReceipts.length === 0 &&
+      !createdLoading
+    ) {
+      loadCreatedInitial();
+    }
     if (
       activeTab === "royalty" &&
       royaltyReceipts.length === 0 &&
@@ -211,22 +201,15 @@ export default function MePage() {
     ) {
       loadRoyaltyInitial();
     }
-    if (
-      activeTab === "activity" &&
-      activityReceipts.length === 0 &&
-      !activityLoading
-    ) {
-      loadActivityInitial();
-    }
   }, [
     activeTab,
     activeAddress,
+    createdReceipts.length,
+    createdLoading,
+    loadCreatedInitial,
     royaltyReceipts.length,
     royaltyLoading,
     loadRoyaltyInitial,
-    activityReceipts.length,
-    activityLoading,
-    loadActivityInitial,
   ]);
 
   // Reset data when disconnecting
@@ -241,16 +224,12 @@ export default function MePage() {
       setCreatedNextStart(null);
       setCreatedLoading(false);
       setCreatedLoadingMore(false);
+      setCreatedError(null);
       setRoyaltyReceipts([]);
       setRoyaltyNextStart(null);
       setRoyaltyLoading(false);
       setRoyaltyLoadingMore(false);
       setRoyaltyError(null);
-      setActivityReceipts([]);
-      setActivityNextHighest(null);
-      setActivityLoading(false);
-      setActivityLoadingMore(false);
-      setActivityError(null);
       setTotalOnChain(null);
       setError(null);
     }
@@ -258,29 +237,24 @@ export default function MePage() {
 
   const handleRefresh = async () => {
     if (!activeAddress) return;
-    setOwnedLoading(true);
-    setCreatedLoading(true);
-    if (activeTab === "royalty") {
-      setRoyaltyLoading(true);
+    if (activeTab === "owned") {
+      setError(null);
+      setOwnedLoading(true);
+      await loadOwnedInitial();
+      setOwnedLoading(false);
+      return;
     }
-    if (activeTab === "activity") {
-      setActivityLoading(true);
+    if (activeTab === "created") {
+      setCreatedError(null);
+      setCreatedLoading(true);
+      await loadCreatedInitial();
+      setCreatedLoading(false);
+      return;
     }
-    await Promise.all([
-      loadOwnedInitial(),
-      loadCreatedInitial(),
-      activeTab === "royalty" ? loadRoyaltyInitial() : Promise.resolve(),
-      activeTab === "activity" ? loadActivityInitial() : Promise.resolve(),
-    ]);
-    setOwnedLoading(false);
-    setCreatedLoading(false);
+    setRoyaltyError(null);
+    setRoyaltyLoading(true);
+    await loadRoyaltyInitial();
     setRoyaltyLoading(false);
-    setActivityLoading(false);
-  };
-
-  const refreshAfterAction = async () => {
-    if (!activeAddress) return;
-    await Promise.all([loadOwnedInitial(), loadCreatedInitial()]);
   };
 
   const validateStacksAddress = (addr: string) => {
@@ -310,7 +284,7 @@ export default function MePage() {
         [receipt.id]:
           "Transfer submitted. Once confirmed on-chain, this receipt will move to the new owner.",
       }));
-      await refreshAfterAction();
+      await loadOwnedInitial();
     } catch (err) {
       console.error("Transfer failed", err);
       setTransferErrors((prev) => ({
@@ -345,7 +319,7 @@ export default function MePage() {
         [receipt.id]:
           "Royalty recipient updated. New transfers will pay royalties to this address.",
       }));
-      await refreshAfterAction();
+      await loadRoyaltyInitial();
     } catch (err) {
       console.error("Updating royalty recipient failed", err);
       setRoyaltyErrors((prev) => ({
@@ -378,6 +352,7 @@ export default function MePage() {
   const handleLoadMoreCreated = async () => {
     if (!activeAddress || createdNextStart === null) return;
     setCreatedLoadingMore(true);
+    setCreatedError(null);
     try {
       const { items, nextStartId } = await getCreatedReceiptsPaged(
         activeAddress,
@@ -388,7 +363,7 @@ export default function MePage() {
       setCreatedNextStart(nextStartId);
     } catch (err) {
       console.error(err);
-      setError("Failed to load more created receipts.");
+      setCreatedError("Failed to load more created receipts.");
     } finally {
       setCreatedLoadingMore(false);
     }
@@ -410,24 +385,6 @@ export default function MePage() {
       setRoyaltyError("Failed to load more royalty receipts.");
     } finally {
       setRoyaltyLoadingMore(false);
-    }
-  };
-
-  const handleLoadMoreActivity = async () => {
-    if (activityNextHighest === null) return;
-    setActivityLoadingMore(true);
-    try {
-      const { items, nextHighestId } = await getActivityReceiptsPaged(
-        activityNextHighest,
-        10
-      );
-      setActivityReceipts((prev) => [...prev, ...items]);
-      setActivityNextHighest(nextHighestId);
-    } catch (err) {
-      console.error(err);
-      setActivityError("Failed to load more activity.");
-    } finally {
-      setActivityLoadingMore(false);
     }
   };
 
@@ -460,9 +417,9 @@ export default function MePage() {
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={!activeAddress || isLoading}
+              disabled={!activeAddress || activeLoading}
               className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40">
-              {isRefreshing || isLoading ? "Refreshing…" : "Refresh"}
+              {activeRefreshing || activeLoading ? "Refreshing…" : "Refresh"}
             </button>
           </div>
         </div>
@@ -521,16 +478,6 @@ export default function MePage() {
               }`}>
               Royalty
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("activity")}
-              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-                activeTab === "activity"
-                  ? "border-black bg-black text-white"
-                  : "border-black bg-white"
-              }`}>
-              Activity
-            </button>
           </div>
 
           <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
@@ -538,7 +485,7 @@ export default function MePage() {
               Your Owned Receipts
             </p>
 
-            {isLoading && (
+            {activeLoading && (
               <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
                 Loading on-chain receipts...
               </div>
@@ -560,9 +507,14 @@ export default function MePage() {
               )}
           </div>
 
-          {error && activeTab !== "royalty" && (
+          {error && activeTab === "owned" && (
             <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
               {error}
+            </div>
+          )}
+          {createdError && activeTab === "created" && (
+            <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {createdError}
             </div>
           )}
           {royaltyError && activeTab === "royalty" && (
@@ -570,14 +522,9 @@ export default function MePage() {
               {royaltyError}
             </div>
           )}
-          {activityError && activeTab === "activity" && (
-            <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {activityError}
-            </div>
-          )}
 
           {!isLoading &&
-            !error &&
+            !createdError &&
             activeTab === "created" &&
             !hasCreated &&
             hasTotal && (
@@ -591,7 +538,7 @@ export default function MePage() {
               </div>
             )}
 
-          {!isLoading && !error && !hasTotal && (
+          {!isLoading && !error && !createdError && !hasTotal && (
             <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
               No receipts exist on this contract yet. Be the first one to stamp
               a Receipt of Life on the home page.
@@ -603,11 +550,6 @@ export default function MePage() {
               Receipts where you are the current royalty recipient.
             </p>
           )}
-          {activeTab === "activity" && !activityError && (
-            <p className="text-xs text-neutral-700">
-              Recent receipts on this contract (newest first).
-            </p>
-          )}
 
           {!isLoading &&
             !royaltyError &&
@@ -616,15 +558,6 @@ export default function MePage() {
             hasTotal && (
               <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
                 No receipts are currently sending royalties to this address.
-              </div>
-            )}
-
-          {!isLoading &&
-            !activityError &&
-            activeTab === "activity" &&
-            !hasActivity && (
-              <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
-                No receipt activity has been recorded yet.
               </div>
             )}
 
@@ -750,7 +683,10 @@ export default function MePage() {
             </ul>
           )}
 
-          {!isLoading && !error && activeTab === "created" && hasCreated && (
+          {!isLoading &&
+            !createdError &&
+            activeTab === "created" &&
+            hasCreated && (
             <ul className="space-y-3">
               <li className="text-[11px]">
                 <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
@@ -955,90 +891,6 @@ export default function MePage() {
               </ul>
             )}
 
-          {!isLoading &&
-            !activityError &&
-            activeTab === "activity" &&
-            hasActivity && (
-              <ul className="space-y-3">
-                <li className="text-[11px]">
-                  <span className="rounded-full border border-dashed border-neutral-500 bg-neutral-50 px-2 py-1">
-                    Contract · {totalOnChain ?? 0} stamped so far
-                  </span>
-                </li>
-                {activityReceipts.map((r) => {
-                  const date = new Date(r.createdAt * 1000);
-                  return (
-                    <li
-                      key={r.id}
-                      className="rounded-xl border border-black bg-white p-4 text-sm">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">
-                          Receipt #{r.id}
-                        </span>
-                        <span className="text-[11px] text-neutral-500">
-                          {date.toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
-                        {r.text}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
-                        <span className="font-mono wrap-break-word">
-                          Creator: {r.creator.slice(0, 8)}…{r.creator.slice(-4)}
-                        </span>
-                        <a
-                          href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline">
-                          View creator
-                        </a>
-                        <span className="font-mono wrap-break-word">
-                          Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
-                        </span>
-                        <a
-                          href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline">
-                          View owner
-                        </a>
-                        <span className="font-mono wrap-break-word">
-                          Royalty to: {r.royaltyRecipient.slice(0, 8)}…
-                          {r.royaltyRecipient.slice(-4)}
-                        </span>
-                        <a
-                          href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline">
-                          View royalty
-                        </a>
-                        {activeAddress &&
-                          (r.creator === activeAddress ||
-                            r.owner === activeAddress ||
-                            r.royaltyRecipient === activeAddress) && (
-                            <span className="rounded-full border border-black px-2 py-1">
-                              You are involved
-                            </span>
-                          )}
-                      </div>
-                    </li>
-                  );
-                })}
-                {activityNextHighest !== null && (
-                  <li>
-                    <button
-                      type="button"
-                      onClick={handleLoadMoreActivity}
-                      disabled={activityLoadingMore}
-                      className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
-                      {activityLoadingMore ? "Loading…" : "Load more"}
-                    </button>
-                  </li>
-                )}
-              </ul>
-            )}
         </div>
       )}
     </section>
