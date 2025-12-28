@@ -1,106 +1,5 @@
 # Stacks Receipt of Life (NOTA) — v2 🧾⚡️
 
----
-
----
-
-## Maintenance by Prof. NOTA Evergreen Standard
-
-### Web App (Class A)
-
-This repo is intended to stay evergreen while remaining production-safe.
-
-### Runtime - A
-
-- Node: **24.x** (see `.nvmrc` and `package.json#engines`)
-  - ~~example alternatives: 22.x / 20.x (adjust if platform requires)~~
-- Package manager:
-  - **NPM** (lockfile: `package-lock.json`)
-  - ~~Yarn (lockfile: `yarn.lock`)~~
-  - ~~PNPM (lockfile: `pnpm-lock.yaml`)~~
-- Deploy target:
-  - **Vercel**
-  - ~~Netlify~~
-  - ~~Self-hosted / Docker~~
-  - ~~Other platform (document explicitly)~~
-
-### Monthly Safe Updates (recommended) - A
-
-1. Check what’s outdated:
-   - `npm outdated`
-   - ~~yarn outdated~~
-   - ~~pnpm outdated~~
-2. Upgrade safe (patch/minor) versions:
-   - `npm update`
-   - or upgrade specific packages shown as non-major
-3. Verify:
-   - `npm audit --audit-level=moderate`
-   - ~~yarn audit --level moderate~~
-   - ~~pnpm audit~~
-   - `npm run build`
-4. Deploy:
-   - **Vercel auto-deploy from `main`**
-   - ~~manual deploy according to platform workflow~~
-
-### Major Updates (quarterly / scheduled) - A
-
-Major upgrades (framework, runtime, or core tooling) must be done one at a time, with a dedicated PR and full testing.
-
-Examples of major upgrades:
-
-- Node major version
-- Next.js / React major version
-- Tailwind CSS major version
-- Package manager major version
-
----
-
-### Backend Tests (Class D)
-
-This repo is a **Support/Test Workspace** (no deployable app). It must stay evergreen so tests/scripts remain reliable.
-
-### Runtime - D
-
-- Node: **24.x** (see `.nvmrc` and `package.json#engines`)
-  - ~~example alternatives: 22.x / 20.x (adjust if platform requires)~~
-- Package manager:
-  - **NPM** (lockfile: `package-lock.json`)
-  - ~~Yarn (lockfile: `yarn.lock`)~~
-  - ~~PNPM (lockfile: `pnpm-lock.yaml`)~~
-- Deploy target: **None (tests/tooling only)**
-
-### Monthly Safe Updates (recommended) - D
-
-1. Check what’s outdated:
-   - `npm outdated`
-   - ~~yarn outdated~~
-   - ~~pnpm outdated~~
-2. Upgrade safe (patch/minor) versions:
-   - `npm update`
-   - or upgrade specific packages shown as non-major
-3. Verify:
-   - `npm audit --audit-level=moderate`
-   - ~~yarn audit~~
-   - ~~pnpm audit~~
-4. Tests:
-   - `npm test`
-5. Build/deploy:
-   - Not applicable (no build/deploy step)
-
-### Major Updates (quarterly / scheduled) - D
-
-Major upgrades (runtime/tooling) must be done one at a time, with a dedicated PR and full testing.
-
-Examples:
-
-- Node major version
-- Test runner/tooling major version (e.g., Vitest/Jest)
-- SDK major (e.g., Clarinet SDK)
-
----
-
----
-
 > NOTA = receipt | note  
 > **A tiny on-chain receipt that can move, earn royalties, and tell a story.**
 
@@ -361,5 +260,104 @@ This repo demonstrates:
 - Royalty routing independent from ownership
 - A minimal, sustainable micro-economy on Stacks using only STX and simple rules
 - A UI-friendly v2 contract with paging + global stats + fee safety
+
+---
+
+---
+
+## Maintenance by Prof. NOTA Evergreen Standard
+
+### Web App (Class A)
+
+This repo is intended to stay evergreen while remaining production-safe.
+
+### Runtime - A
+
+- Node: **24.x** (see `.nvmrc` and `package.json#engines`)
+  - ~~example alternatives: 22.x / 20.x (adjust if platform requires)~~
+- Package manager:
+  - **NPM** (lockfile: `package-lock.json`)
+  - ~~Yarn (lockfile: `yarn.lock`)~~
+  - ~~PNPM (lockfile: `pnpm-lock.yaml`)~~
+- Deploy target:
+  - **Vercel**
+  - ~~Netlify~~
+  - ~~Self-hosted / Docker~~
+  - ~~Other platform (document explicitly)~~
+
+### Monthly Safe Updates (recommended) - A
+
+1. Check what’s outdated:
+   - `npm outdated`
+   - ~~yarn outdated~~
+   - ~~pnpm outdated~~
+2. Upgrade safe (patch/minor) versions:
+   - `npm update`
+   - or upgrade specific packages shown as non-major
+3. Verify:
+   - `npm audit --audit-level=moderate`
+   - ~~yarn audit --level moderate~~
+   - ~~pnpm audit~~
+   - `npm run build`
+4. Deploy:
+   - **Vercel auto-deploy from `main`**
+   - ~~manual deploy according to platform workflow~~
+
+### Major Updates (quarterly / scheduled) - A
+
+Major upgrades (framework, runtime, or core tooling) must be done one at a time, with a dedicated PR and full testing.
+
+Examples of major upgrades:
+
+- Node major version
+- Next.js / React major version
+- Tailwind CSS major version
+- Package manager major version
+
+---
+
+### Backend Tests (Class D)
+
+This repo is a **Support/Test Workspace** (no deployable app). It must stay evergreen so tests/scripts remain reliable.
+
+### Runtime - D
+
+- Node: **24.x** (see `.nvmrc` and `package.json#engines`)
+  - ~~example alternatives: 22.x / 20.x (adjust if platform requires)~~
+- Package manager:
+  - **NPM** (lockfile: `package-lock.json`)
+  - ~~Yarn (lockfile: `yarn.lock`)~~
+  - ~~PNPM (lockfile: `pnpm-lock.yaml`)~~
+- Deploy target: **None (tests/tooling only)**
+
+### Monthly Safe Updates (recommended) - D
+
+1. Check what’s outdated:
+   - `npm outdated`
+   - ~~yarn outdated~~
+   - ~~pnpm outdated~~
+2. Upgrade safe (patch/minor) versions:
+   - `npm update`
+   - or upgrade specific packages shown as non-major
+3. Verify:
+   - `npm audit --audit-level=moderate`
+   - ~~yarn audit~~
+   - ~~pnpm audit~~
+4. Tests:
+   - `npm test`
+5. Build/deploy:
+   - Not applicable (no build/deploy step)
+
+### Major Updates (quarterly / scheduled) - D
+
+Major upgrades (runtime/tooling) must be done one at a time, with a dedicated PR and full testing.
+
+Examples:
+
+- Node major version
+- Test runner/tooling major version (e.g., Vitest/Jest)
+- SDK major (e.g., Clarinet SDK)
+
+---
 
 ---
