@@ -19,7 +19,8 @@ export default function MePage() {
   const { address: wcAddress } = useAppKitAccount({ namespace: "stacks" });
   const activeAddress = address ?? wcAddress ?? null;
   const [ownedReceipts, setOwnedReceipts] = useState<Receipt[]>([]);
-  const [ownedNextStart, setOwnedNextStart] = useState<bigint | null>(null);
+  const [ownedWindowStart, setOwnedWindowStart] = useState<number | null>(null);
+  const [ownedHasMore, setOwnedHasMore] = useState(false);
   const [ownedLoading, setOwnedLoading] = useState(false);
   const [ownedLoadingMore, setOwnedLoadingMore] = useState(false);
 
@@ -83,6 +84,33 @@ export default function MePage() {
     createdLoadingMore ||
     royaltyLoadingMore ||
     activityLoadingMore;
+  const ownedPageSize = 10;
+
+  const fetchOwnedWindow = useCallback(
+    async (start: number) => {
+      if (!activeAddress) {
+        return { items: [] as Receipt[], startUsed: 1 };
+      }
+      let currentStart = start;
+      while (true) {
+        const { items } = await getOwnedReceiptsPaged(
+          activeAddress,
+          BigInt(currentStart),
+          ownedPageSize
+        );
+        if (items.length > 0 || currentStart === 1) {
+          const ordered = [...items].sort((a, b) => b.id - a.id);
+          return { items: ordered, startUsed: currentStart };
+        }
+        const nextStart = Math.max(1, currentStart - ownedPageSize);
+        if (nextStart === currentStart) {
+          return { items: [] as Receipt[], startUsed: currentStart };
+        }
+        currentStart = nextStart;
+      }
+    },
+    [activeAddress, ownedPageSize]
+  );
 
   const loadOwnedInitial = useCallback(async () => {
     if (!activeAddress) return;
@@ -90,21 +118,26 @@ export default function MePage() {
     setError(null);
     try {
       const total = await getLastId();
-      const { items, nextStartId } = await getOwnedReceiptsPaged(
-        activeAddress,
-        null,
-        10
-      );
+      if (total === 0) {
+        setTotalOnChain(0);
+        setOwnedReceipts([]);
+        setOwnedWindowStart(null);
+        setOwnedHasMore(false);
+        return;
+      }
+      const initialStart = Math.max(1, total - (ownedPageSize - 1));
+      const { items, startUsed } = await fetchOwnedWindow(initialStart);
       setTotalOnChain(total);
       setOwnedReceipts(items);
-      setOwnedNextStart(nextStartId);
+      setOwnedWindowStart(startUsed);
+      setOwnedHasMore(startUsed > 1);
     } catch (err) {
       console.error(err);
       setError("Failed to load receipts from Stacks mainnet.");
     } finally {
       setOwnedLoading(false);
     }
-  }, [activeAddress]);
+  }, [activeAddress, ownedPageSize, fetchOwnedWindow]);
 
   const loadCreatedInitial = useCallback(async () => {
     if (!activeAddress) return;
@@ -200,7 +233,8 @@ export default function MePage() {
   useEffect(() => {
     if (!activeAddress) {
       setOwnedReceipts([]);
-      setOwnedNextStart(null);
+      setOwnedWindowStart(null);
+      setOwnedHasMore(false);
       setOwnedLoading(false);
       setOwnedLoadingMore(false);
       setCreatedReceipts([]);
@@ -325,16 +359,14 @@ export default function MePage() {
   };
 
   const handleLoadMoreOwned = async () => {
-    if (!activeAddress || ownedNextStart === null) return;
+    if (!activeAddress || !ownedWindowStart || !ownedHasMore) return;
     setOwnedLoadingMore(true);
     try {
-      const { items, nextStartId } = await getOwnedReceiptsPaged(
-        activeAddress,
-        ownedNextStart,
-        10
-      );
+      const nextStart = Math.max(1, ownedWindowStart - ownedPageSize);
+      const { items, startUsed } = await fetchOwnedWindow(nextStart);
       setOwnedReceipts((prev) => [...prev, ...items]);
-      setOwnedNextStart(nextStartId);
+      setOwnedWindowStart(startUsed);
+      setOwnedHasMore(startUsed > 1);
     } catch (err) {
       console.error(err);
       setError("Failed to load more owned receipts.");
@@ -501,11 +533,32 @@ export default function MePage() {
             </button>
           </div>
 
-          {isLoading && (
-            <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
-              Loading receipts from Stacks mainnet…
-            </div>
-          )}
+          <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+            <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+              Your Owned Receipts
+            </p>
+
+            {isLoading && (
+              <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+                Loading on-chain receipts...
+              </div>
+            )}
+
+            {!isLoading &&
+              !error &&
+              activeTab === "owned" &&
+              !hasOwned &&
+              hasTotal && (
+                <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+                  There are{" "}
+                  <span className="font-mono">
+                    {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
+                  </span>{" "}
+                  on this contract, but none are owned by this wallet yet. Stamp
+                  your first receipt on the home page.
+                </div>
+              )}
+          </div>
 
           {error && activeTab !== "royalty" && (
             <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
@@ -522,21 +575,6 @@ export default function MePage() {
               {activityError}
             </div>
           )}
-
-          {!isLoading &&
-            !error &&
-            activeTab === "owned" &&
-            !hasOwned &&
-            hasTotal && (
-              <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
-                There are{" "}
-                <span className="font-mono">
-                  {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
-                </span>{" "}
-                on this contract, but none are owned by this wallet yet. Stamp
-                your first receipt on the home page.
-              </div>
-            )}
 
           {!isLoading &&
             !error &&
@@ -592,12 +630,6 @@ export default function MePage() {
 
           {!isLoading && !error && activeTab === "owned" && hasOwned && (
             <ul className="space-y-3">
-              <li className="text-[11px]">
-                <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
-                  Owned · {ownedReceipts.length} receipt
-                  {ownedReceipts.length > 1 ? "s" : ""}
-                </span>
-              </li>
               {ownedReceipts.map((r) => {
                 const date = new Date(r.createdAt * 1000);
                 return (
@@ -697,7 +729,7 @@ export default function MePage() {
                   </li>
                 );
               })}
-              {ownedNextStart !== null && (
+              {ownedHasMore ? (
                 <li>
                   <button
                     type="button"
@@ -706,6 +738,13 @@ export default function MePage() {
                     className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
                     {ownedLoadingMore ? "Loading…" : "Load more"}
                   </button>
+                </li>
+              ) : (
+                <li className="text-[11px]">
+                  <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
+                    Owned · {ownedReceipts.length} receipt
+                    {ownedReceipts.length > 1 ? "s" : ""}
+                  </span>
                 </li>
               )}
             </ul>
