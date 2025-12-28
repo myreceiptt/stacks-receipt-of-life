@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@/hooks/use-wallet";
+import { useAppKitAccount } from "@reown/appkit/react";
 import {
   getLastId,
   getOwnedReceiptsPaged,
@@ -15,6 +16,8 @@ import {
 
 export default function MePage() {
   const { address } = useWallet();
+  const { address: wcAddress } = useAppKitAccount({ namespace: "stacks" });
+  const activeAddress = address ?? wcAddress ?? null;
   const [ownedReceipts, setOwnedReceipts] = useState<Receipt[]>([]);
   const [ownedNextStart, setOwnedNextStart] = useState<bigint | null>(null);
   const [ownedLoading, setOwnedLoading] = useState(false);
@@ -82,13 +85,13 @@ export default function MePage() {
     activityLoadingMore;
 
   const loadOwnedInitial = useCallback(async () => {
-    if (!address) return;
+    if (!activeAddress) return;
     setOwnedLoading(true);
     setError(null);
     try {
       const total = await getLastId();
       const { items, nextStartId } = await getOwnedReceiptsPaged(
-        address,
+        activeAddress,
         null,
         10
       );
@@ -101,16 +104,16 @@ export default function MePage() {
     } finally {
       setOwnedLoading(false);
     }
-  }, [address]);
+  }, [activeAddress]);
 
   const loadCreatedInitial = useCallback(async () => {
-    if (!address) return;
+    if (!activeAddress) return;
     setCreatedLoading(true);
     setError(null);
     try {
       const total = await getLastId();
       const { items, nextStartId } = await getCreatedReceiptsPaged(
-        address,
+        activeAddress,
         null,
         10
       );
@@ -123,15 +126,15 @@ export default function MePage() {
     } finally {
       setCreatedLoading(false);
     }
-  }, [address]);
+  }, [activeAddress]);
 
   const loadRoyaltyInitial = useCallback(async () => {
-    if (!address) return;
+    if (!activeAddress) return;
     setRoyaltyLoading(true);
     setRoyaltyError(null);
     try {
       const { items, nextStartId } = await getRoyaltyReceiptsPaged(
-        address,
+        activeAddress,
         null,
         10
       );
@@ -143,7 +146,7 @@ export default function MePage() {
     } finally {
       setRoyaltyLoading(false);
     }
-  }, [address]);
+  }, [activeAddress]);
 
   const loadActivityInitial = useCallback(async () => {
     setActivityLoading(true);
@@ -161,13 +164,13 @@ export default function MePage() {
   }, []);
 
   useEffect(() => {
-    if (!address) return;
+    if (!activeAddress) return;
     loadOwnedInitial();
     loadCreatedInitial();
-  }, [address, loadOwnedInitial, loadCreatedInitial]);
+  }, [activeAddress, loadOwnedInitial, loadCreatedInitial]);
 
   useEffect(() => {
-    if (!address) return;
+    if (!activeAddress) return;
     if (
       activeTab === "royalty" &&
       royaltyReceipts.length === 0 &&
@@ -184,7 +187,7 @@ export default function MePage() {
     }
   }, [
     activeTab,
-    address,
+    activeAddress,
     royaltyReceipts.length,
     royaltyLoading,
     loadRoyaltyInitial,
@@ -195,7 +198,7 @@ export default function MePage() {
 
   // Reset data when disconnecting
   useEffect(() => {
-    if (!address) {
+    if (!activeAddress) {
       setOwnedReceipts([]);
       setOwnedNextStart(null);
       setOwnedLoading(false);
@@ -217,10 +220,10 @@ export default function MePage() {
       setTotalOnChain(null);
       setError(null);
     }
-  }, [address]);
+  }, [activeAddress]);
 
   const handleRefresh = async () => {
-    if (!address) return;
+    if (!activeAddress) return;
     setOwnedLoading(true);
     setCreatedLoading(true);
     if (activeTab === "royalty") {
@@ -242,7 +245,7 @@ export default function MePage() {
   };
 
   const refreshAfterAction = async () => {
-    if (!address) return;
+    if (!activeAddress) return;
     await Promise.all([loadOwnedInitial(), loadCreatedInitial()]);
   };
 
@@ -252,7 +255,7 @@ export default function MePage() {
   };
 
   const handleTransfer = async (receipt: Receipt) => {
-    if (!address || receipt.owner !== address) return;
+    if (!activeAddress || receipt.owner !== activeAddress) return;
     const input = transferInputs[receipt.id] ?? "";
     if (!validateStacksAddress(input)) {
       setTransferErrors((prev) => ({
@@ -287,7 +290,7 @@ export default function MePage() {
   };
 
   const handleRoyaltyUpdate = async (receipt: Receipt) => {
-    if (!address || receipt.creator !== address) return;
+    if (!activeAddress || receipt.creator !== activeAddress) return;
     const input = royaltyInputs[receipt.id] ?? "";
     if (!validateStacksAddress(input)) {
       setRoyaltyErrors((prev) => ({
@@ -322,11 +325,11 @@ export default function MePage() {
   };
 
   const handleLoadMoreOwned = async () => {
-    if (!address || ownedNextStart === null) return;
+    if (!activeAddress || ownedNextStart === null) return;
     setOwnedLoadingMore(true);
     try {
       const { items, nextStartId } = await getOwnedReceiptsPaged(
-        address,
+        activeAddress,
         ownedNextStart,
         10
       );
@@ -341,11 +344,11 @@ export default function MePage() {
   };
 
   const handleLoadMoreCreated = async () => {
-    if (!address || createdNextStart === null) return;
+    if (!activeAddress || createdNextStart === null) return;
     setCreatedLoadingMore(true);
     try {
       const { items, nextStartId } = await getCreatedReceiptsPaged(
-        address,
+        activeAddress,
         createdNextStart,
         10
       );
@@ -360,11 +363,11 @@ export default function MePage() {
   };
 
   const handleLoadMoreRoyalty = async () => {
-    if (!address || royaltyNextStart === null) return;
+    if (!activeAddress || royaltyNextStart === null) return;
     setRoyaltyLoadingMore(true);
     try {
       const { items, nextStartId } = await getRoyaltyReceiptsPaged(
-        address,
+        activeAddress,
         royaltyNextStart,
         10
       );
@@ -404,12 +407,12 @@ export default function MePage() {
             <p className="text-xs uppercase tracking-[0.25em] text-neutral-600">
               My Receipts · on-chain
             </p>
-            {!address && (
+            {!activeAddress && (
               <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
                 Connect to View Your Receipts.
               </h1>
             )}
-            {address && (
+            {activeAddress && (
               <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
                 Your Receipts on Stacks.
               </h1>
@@ -417,15 +420,15 @@ export default function MePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            {address && (
+            {activeAddress && (
               <span className="rounded-full border border-black bg-white px-3 py-1 font-mono">
-                {address.slice(0, 8)}…{address.slice(-4)}
+                {activeAddress.slice(0, 8)}…{activeAddress.slice(-4)}
               </span>
             )}
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={!address || isLoading}
+              disabled={!activeAddress || isLoading}
               className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40">
               {isRefreshing || isLoading ? "Refreshing…" : "Refresh"}
             </button>
@@ -441,13 +444,13 @@ export default function MePage() {
         </p>
       </header>
 
-      {!address && (
+      {!activeAddress && (
         <div className="rounded-md border border-dashed border-black bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
           Connect your Stacks wallet in the navbar to see your receipts.
         </div>
       )}
 
-      {address && (
+      {activeAddress && (
         <div className="space-y-4">
           <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
             You can view the receipts you own, the ones you created, and those
@@ -644,16 +647,16 @@ export default function MePage() {
                         className="underline">
                         View royalty
                       </a>
-                      {address &&
-                        (r.creator === address ||
-                          r.owner === address ||
-                          r.royaltyRecipient === address) && (
+                      {activeAddress &&
+                        (r.creator === activeAddress ||
+                          r.owner === activeAddress ||
+                          r.royaltyRecipient === activeAddress) && (
                           <span className="rounded-full border border-black px-2 py-1">
                             You are involved
                           </span>
                         )}
                     </div>
-                    {address === r.owner && activeTab === "owned" && (
+                    {activeAddress === r.owner && activeTab === "owned" && (
                       <div className="mt-4 space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
                         <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-700">
                           Actions · Transfer
@@ -765,10 +768,10 @@ export default function MePage() {
                         className="underline">
                         View royalty
                       </a>
-                      {address &&
-                        (r.creator === address ||
-                          r.owner === address ||
-                          r.royaltyRecipient === address) && (
+                      {activeAddress &&
+                        (r.creator === activeAddress ||
+                          r.owner === activeAddress ||
+                          r.royaltyRecipient === activeAddress) && (
                           <span className="rounded-full border border-black px-2 py-1">
                             You are involved
                           </span>
@@ -851,15 +854,15 @@ export default function MePage() {
                           className="underline">
                           View royalty
                         </a>
-                        {address &&
-                          (r.creator === address ||
-                            r.owner === address ||
-                            r.royaltyRecipient === address) && (
+                        {activeAddress &&
+                          (r.creator === activeAddress ||
+                            r.owner === activeAddress ||
+                            r.royaltyRecipient === activeAddress) && (
                             <span className="rounded-full border border-black px-2 py-1">
                               You are involved
                             </span>
                           )}
-                        {address === r.creator && (
+                        {activeAddress === r.creator && (
                           <div className="mt-4 w-full space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
                             <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-700">
                               Actions · Update royalty recipient
@@ -972,10 +975,10 @@ export default function MePage() {
                           className="underline">
                           View royalty
                         </a>
-                        {address &&
-                          (r.creator === address ||
-                            r.owner === address ||
-                            r.royaltyRecipient === address) && (
+                        {activeAddress &&
+                          (r.creator === activeAddress ||
+                            r.owner === activeAddress ||
+                            r.royaltyRecipient === activeAddress) && (
                             <span className="rounded-full border border-black px-2 py-1">
                               You are involved
                             </span>
