@@ -321,61 +321,58 @@ export default function ContractPage() {
             </button>
           </div>
 
-          {isCooling ? (
-            <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-              Cooling down for {Math.max(0, Math.ceil(remainingMs))} milliseconds
-              and when done will loading on-chain data...
-            </div>
-          ) : (
-            <>
-              {activeTab === "contract" && (
-                <ContractTab
-                  version={version}
-                  contractId={contractId}
-                  loadingData={loadingData}
-                  dataError={dataError}
-                  config={config}
-                  stats={stats}
-                />
-              )}
+          {activeTab === "contract" && (
+            <ContractTab
+              version={version}
+              contractId={contractId}
+              loadingData={loadingData}
+              dataError={dataError}
+              config={config}
+              stats={stats}
+              cooling={isCooling}
+              cooldownMs={remainingMs}
+            />
+          )}
 
-              {activeTab === "status" && (
-                <StatusTab
-                  loadingData={loadingData}
-                  dataError={dataError}
-                  version={version}
-                  config={config}
-                  stats={stats}
-                />
-              )}
+          {activeTab === "status" && (
+            <StatusTab
+              loadingData={loadingData}
+              dataError={dataError}
+              version={version}
+              config={config}
+              stats={stats}
+              cooling={isCooling}
+              cooldownMs={remainingMs}
+            />
+          )}
 
-              {activeTab === "update" && (
-                <UpdateTab
-                  loadingData={loadingData}
-                  dataError={dataError}
-                  version={version}
-                  config={config}
-                  stats={stats}
-                  isAdmin={isAdmin}
-                  address={activeAddress}
-                  feeStampInput={feeStampInput}
-                  feeRoyaltyInput={feeRoyaltyInput}
-                  feeError={feeError}
-                  feeMessage={feeMessage}
-                  isUpdatingFees={isUpdatingFees}
-                  newAdminInput={newAdminInput}
-                  adminError={adminError}
-                  adminMessage={adminMessage}
-                  isUpdatingAdmin={isUpdatingAdmin}
-                  onFeeStampChange={setFeeStampInput}
-                  onFeeRoyaltyChange={setFeeRoyaltyInput}
-                  onAdminChange={setNewAdminInput}
-                  onSubmitFees={handleSubmitFees}
-                  onSubmitAdmin={handleSubmitAdmin}
-                  shorten={shorten}
-                />
-              )}
-            </>
+          {activeTab === "update" && (
+            <UpdateTab
+              loadingData={loadingData}
+              dataError={dataError}
+              version={version}
+              config={config}
+              stats={stats}
+              cooling={isCooling}
+              cooldownMs={remainingMs}
+              isAdmin={isAdmin}
+              address={activeAddress}
+              feeStampInput={feeStampInput}
+              feeRoyaltyInput={feeRoyaltyInput}
+              feeError={feeError}
+              feeMessage={feeMessage}
+              isUpdatingFees={isUpdatingFees}
+              newAdminInput={newAdminInput}
+              adminError={adminError}
+              adminMessage={adminMessage}
+              isUpdatingAdmin={isUpdatingAdmin}
+              onFeeStampChange={setFeeStampInput}
+              onFeeRoyaltyChange={setFeeRoyaltyInput}
+              onAdminChange={setNewAdminInput}
+              onSubmitFees={handleSubmitFees}
+              onSubmitAdmin={handleSubmitAdmin}
+              shorten={shorten}
+            />
           )}
         </div>
       )}

@@ -41,9 +41,9 @@ export default function MePage() {
 
   const [totalOnChain, setTotalOnChain] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "owned" | "created" | "royalty"
-  >("owned");
+  const [activeTab, setActiveTab] = useState<"owned" | "created" | "royalty">(
+    "owned"
+  );
   const [transferInputs, setTransferInputs] = useState<Record<number, string>>(
     {}
   );
@@ -541,9 +541,18 @@ export default function MePage() {
           </div>
 
           {isCooling ? (
-            <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-              Cooling down for {Math.max(0, Math.ceil(remainingMs))} milliseconds
-              and when done will loading on-chain data...
+            <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+              <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+                {activeTab === "owned"
+                  ? "Your Owned Receipts"
+                  : activeTab === "created"
+                  ? "Your Created Receipts"
+                  : "Royalty Receipts"}
+              </p>
+              <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+                Cooling down for {Math.max(0, Math.ceil(remainingMs))}{" "}
+                milliseconds and when done will loading on-chain data...
+              </div>
             </div>
           ) : (
             <>
@@ -568,8 +577,7 @@ export default function MePage() {
                       <span className="font-mono">
                         {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
                       </span>{" "}
-                      on this contract, but none are owned by this wallet yet.
-                      Stamp your first receipt on the home page.
+                      , but none are owned by you.
                     </div>
                   )}
               </div>
@@ -750,213 +758,215 @@ export default function MePage() {
                   )}
                 </ul>
               )}
-          {!isLoading &&
-            !createdError &&
-            activeTab === "created" &&
-            hasCreated && (
-            <ul className="space-y-3">
-              <li className="text-[11px]">
-                <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
-                  Created · {createdReceipts.length} receipt
-                  {createdReceipts.length > 1 ? "s" : ""}
-                </span>
-              </li>
-              {createdReceipts.map((r) => {
-                const date = new Date(r.createdAt * 1000);
-                return (
-                  <li
-                    key={r.id}
-                    className="rounded-xl border border-black bg-white p-4 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">
-                        Receipt #{r.id}
+              {!isLoading &&
+                !createdError &&
+                activeTab === "created" &&
+                hasCreated && (
+                  <ul className="space-y-3">
+                    <li className="text-[11px]">
+                      <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
+                        Created · {createdReceipts.length} receipt
+                        {createdReceipts.length > 1 ? "s" : ""}
                       </span>
-                      <span className="text-[11px] text-neutral-500">
-                        {date.toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
-                      {r.text}
-                    </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
-                      <span className="font-mono wrap-break-word">
-                        Creator: {r.creator.slice(0, 8)}…{r.creator.slice(-4)}
-                      </span>
-                      <a
-                        href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline">
-                        View creator
-                      </a>
-                      <span className="font-mono wrap-break-word">
-                        Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
-                      </span>
-                      <a
-                        href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline">
-                        View owner
-                      </a>
-                      <span className="font-mono wrap-break-word">
-                        Royalty to: {r.royaltyRecipient.slice(0, 8)}…
-                        {r.royaltyRecipient.slice(-4)}
-                      </span>
-                      <a
-                        href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline">
-                        View royalty
-                      </a>
-                      {activeAddress &&
-                        (r.creator === activeAddress ||
-                          r.owner === activeAddress ||
-                          r.royaltyRecipient === activeAddress) && (
-                          <span className="rounded-full border border-black px-2 py-1">
-                            You are involved
-                          </span>
-                        )}
-                    </div>
-                  </li>
-                );
-              })}
-              {createdNextStart !== null && (
-                <li>
-                  <button
-                    type="button"
-                    onClick={handleLoadMoreCreated}
-                    disabled={createdLoadingMore}
-                    className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
-                    {createdLoadingMore ? "Loading…" : "Load more"}
-                  </button>
-                </li>
-              )}
-            </ul>
-          )}
-
-          {!isLoading &&
-            !royaltyError &&
-            activeTab === "royalty" &&
-            hasRoyalty && (
-              <ul className="space-y-3">
-                <li className="text-[11px]">
-                  <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
-                    Royalty · {royaltyReceipts.length} receipt
-                    {royaltyReceipts.length > 1 ? "s" : ""}
-                  </span>
-                </li>
-                {royaltyReceipts.map((r) => {
-                  const date = new Date(r.createdAt * 1000);
-                  return (
-                    <li
-                      key={r.id}
-                      className="rounded-xl border border-black bg-white p-4 text-sm">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">
-                          Receipt #{r.id}
-                        </span>
-                        <span className="text-[11px] text-neutral-500">
-                          {date.toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
-                        {r.text}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
-                        <span className="font-mono wrap-break-word">
-                          Creator: {r.creator.slice(0, 8)}…{r.creator.slice(-4)}
-                        </span>
-                        <a
-                          href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline">
-                          View creator
-                        </a>
-                        <span className="font-mono wrap-break-word">
-                          Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
-                        </span>
-                        <a
-                          href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline">
-                          View owner
-                        </a>
-                        <span className="font-mono wrap-break-word">
-                          Royalty to: {r.royaltyRecipient.slice(0, 8)}…
-                          {r.royaltyRecipient.slice(-4)}
-                        </span>
-                        <a
-                          href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline">
-                          View royalty
-                        </a>
-                        {activeAddress &&
-                          (r.creator === activeAddress ||
-                            r.owner === activeAddress ||
-                            r.royaltyRecipient === activeAddress) && (
-                            <span className="rounded-full border border-black px-2 py-1">
-                              You are involved
-                            </span>
-                          )}
-                        {activeAddress === r.creator && (
-                          <div className="mt-4 w-full space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-                            <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-700">
-                              Actions · Update royalty recipient
-                            </p>
-                            <input
-                              type="text"
-                              value={royaltyInputs[r.id] ?? ""}
-                              onChange={(e) =>
-                                setRoyaltyInputs((prev) => ({
-                                  ...prev,
-                                  [r.id]: e.target.value,
-                                }))
-                              }
-                              placeholder="S…"
-                              className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-                            />
-                            {royaltyErrors[r.id] && (
-                              <p className="text-[11px] text-red-700">
-                                {royaltyErrors[r.id]}
-                              </p>
-                            )}
-                            {royaltySuccess[r.id] && (
-                              <p className="text-[11px] text-green-700">
-                                {royaltySuccess[r.id]}
-                              </p>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => handleRoyaltyUpdate(r)}
-                              disabled={!!royaltyUpdating[r.id]}
-                              className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
-                              {royaltyUpdating[r.id] ? "Saving…" : "Save"}
-                            </button>
-                          </div>
-                        )}
-                      </div>
                     </li>
-                  );
-                })}
-              {royaltyNextStart !== null && (
-                <li>
-                  <button
-                      type="button"
-                      onClick={handleLoadMoreRoyalty}
-                      disabled={royaltyLoadingMore}
-                      className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
-                      {royaltyLoadingMore ? "Loading…" : "Load more"}
-                  </button>
-                </li>
-              )}
-            </ul>
-          )}
+                    {createdReceipts.map((r) => {
+                      const date = new Date(r.createdAt * 1000);
+                      return (
+                        <li
+                          key={r.id}
+                          className="rounded-xl border border-black bg-white p-4 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">
+                              Receipt #{r.id}
+                            </span>
+                            <span className="text-[11px] text-neutral-500">
+                              {date.toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
+                            {r.text}
+                          </p>
+                          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
+                            <span className="font-mono wrap-break-word">
+                              Creator: {r.creator.slice(0, 8)}…
+                              {r.creator.slice(-4)}
+                            </span>
+                            <a
+                              href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline">
+                              View creator
+                            </a>
+                            <span className="font-mono wrap-break-word">
+                              Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
+                            </span>
+                            <a
+                              href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline">
+                              View owner
+                            </a>
+                            <span className="font-mono wrap-break-word">
+                              Royalty to: {r.royaltyRecipient.slice(0, 8)}…
+                              {r.royaltyRecipient.slice(-4)}
+                            </span>
+                            <a
+                              href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline">
+                              View royalty
+                            </a>
+                            {activeAddress &&
+                              (r.creator === activeAddress ||
+                                r.owner === activeAddress ||
+                                r.royaltyRecipient === activeAddress) && (
+                                <span className="rounded-full border border-black px-2 py-1">
+                                  You are involved
+                                </span>
+                              )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                    {createdNextStart !== null && (
+                      <li>
+                        <button
+                          type="button"
+                          onClick={handleLoadMoreCreated}
+                          disabled={createdLoadingMore}
+                          className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                          {createdLoadingMore ? "Loading…" : "Load more"}
+                        </button>
+                      </li>
+                    )}
+                  </ul>
+                )}
+
+              {!isLoading &&
+                !royaltyError &&
+                activeTab === "royalty" &&
+                hasRoyalty && (
+                  <ul className="space-y-3">
+                    <li className="text-[11px]">
+                      <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
+                        Royalty · {royaltyReceipts.length} receipt
+                        {royaltyReceipts.length > 1 ? "s" : ""}
+                      </span>
+                    </li>
+                    {royaltyReceipts.map((r) => {
+                      const date = new Date(r.createdAt * 1000);
+                      return (
+                        <li
+                          key={r.id}
+                          className="rounded-xl border border-black bg-white p-4 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">
+                              Receipt #{r.id}
+                            </span>
+                            <span className="text-[11px] text-neutral-500">
+                              {date.toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
+                            {r.text}
+                          </p>
+                          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
+                            <span className="font-mono wrap-break-word">
+                              Creator: {r.creator.slice(0, 8)}…
+                              {r.creator.slice(-4)}
+                            </span>
+                            <a
+                              href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline">
+                              View creator
+                            </a>
+                            <span className="font-mono wrap-break-word">
+                              Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
+                            </span>
+                            <a
+                              href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline">
+                              View owner
+                            </a>
+                            <span className="font-mono wrap-break-word">
+                              Royalty to: {r.royaltyRecipient.slice(0, 8)}…
+                              {r.royaltyRecipient.slice(-4)}
+                            </span>
+                            <a
+                              href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="underline">
+                              View royalty
+                            </a>
+                            {activeAddress &&
+                              (r.creator === activeAddress ||
+                                r.owner === activeAddress ||
+                                r.royaltyRecipient === activeAddress) && (
+                                <span className="rounded-full border border-black px-2 py-1">
+                                  You are involved
+                                </span>
+                              )}
+                            {activeAddress === r.creator && (
+                              <div className="mt-4 w-full space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                                <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-700">
+                                  Actions · Update royalty recipient
+                                </p>
+                                <input
+                                  type="text"
+                                  value={royaltyInputs[r.id] ?? ""}
+                                  onChange={(e) =>
+                                    setRoyaltyInputs((prev) => ({
+                                      ...prev,
+                                      [r.id]: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="S…"
+                                  className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                                />
+                                {royaltyErrors[r.id] && (
+                                  <p className="text-[11px] text-red-700">
+                                    {royaltyErrors[r.id]}
+                                  </p>
+                                )}
+                                {royaltySuccess[r.id] && (
+                                  <p className="text-[11px] text-green-700">
+                                    {royaltySuccess[r.id]}
+                                  </p>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRoyaltyUpdate(r)}
+                                  disabled={!!royaltyUpdating[r.id]}
+                                  className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                                  {royaltyUpdating[r.id] ? "Saving…" : "Save"}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                    {royaltyNextStart !== null && (
+                      <li>
+                        <button
+                          type="button"
+                          onClick={handleLoadMoreRoyalty}
+                          disabled={royaltyLoadingMore}
+                          className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                          {royaltyLoadingMore ? "Loading…" : "Load more"}
+                        </button>
+                      </li>
+                    )}
+                  </ul>
+                )}
             </>
           )}
         </div>

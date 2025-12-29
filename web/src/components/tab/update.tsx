@@ -31,6 +31,8 @@ type UpdateTabProps = {
   version: ContractVersion | null;
   config: ContractConfig | null;
   stats: ContractStats | null;
+  cooling: boolean;
+  cooldownMs: number;
   isAdmin: boolean;
   address: string | null;
   feeStampInput: string;
@@ -56,6 +58,8 @@ export function UpdateTab({
   version,
   config,
   stats,
+  cooling,
+  cooldownMs,
   isAdmin,
   address,
   feeStampInput,
@@ -74,6 +78,19 @@ export function UpdateTab({
   onSubmitAdmin,
   shorten,
 }: UpdateTabProps) {
+  if (cooling) {
+    return (
+      <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+        <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+          Update Contract
+        </p>
+        <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+          Cooling down for {Math.max(0, Math.ceil(cooldownMs))} milliseconds and
+          when done will loading on-chain data...
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
       <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
