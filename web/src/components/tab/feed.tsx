@@ -89,7 +89,9 @@ export function FeedTab({
                   target="_blank"
                   rel="noreferrer"
                   className="underline">
-                  <span className="font-mono">{item.txid}</span>
+                  <span className="font-mono">
+                    {item.txid.slice(0, 7)} ... {item.txid.slice(-7)}
+                  </span>
                 </a>{" "}
                 <span className="font-mono">(View on Explorer)</span>
               </div>
@@ -100,7 +102,9 @@ export function FeedTab({
                   target="_blank"
                   rel="noreferrer"
                   className="underline">
-                  <span className="font-mono">{item.sender}</span>
+                  <span className="font-mono">
+                    {item.sender.slice(0, 7)} ... {item.sender.slice(-4)}
+                  </span>
                 </a>{" "}
                 <span className="font-mono">(View on Explorer)</span>
               </div>
@@ -113,12 +117,15 @@ export function FeedTab({
                       target="_blank"
                       rel="noreferrer"
                       className="underline">
-                      <span className="font-mono">{item.recipient}</span>
+                      <span className="font-mono">
+                        {item.recipient.slice(0, 7)} ...{" "}
+                        {item.recipient.slice(-4)}
+                      </span>
                     </a>{" "}
                     <span className="font-mono">(View on Explorer)</span>
                   </>
                 ) : (
-                  <span className="font-mono">unknown</span>
+                  <span className="font-mono">no recipient</span>
                 )}
               </div>
             </li>

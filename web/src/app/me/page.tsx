@@ -44,9 +44,9 @@ export default function MePage() {
   const [transferErrors, setTransferErrors] = useState<Record<number, string>>(
     {}
   );
-  const [transferSuccess, setTransferSuccess] = useState<Record<number, string>>(
-    {}
-  );
+  const [transferSuccess, setTransferSuccess] = useState<
+    Record<number, string>
+  >({});
   const [transferring, setTransferring] = useState<Record<number, boolean>>({});
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const hasOwned = ownedReceipts.length > 0;
@@ -143,11 +143,7 @@ export default function MePage() {
     let ok = false;
     try {
       const total = await getLastId();
-      const { items } = await getCreatedReceiptsPaged(
-        activeAddress,
-        null,
-        10
-      );
+      const { items } = await getCreatedReceiptsPaged(activeAddress, null, 10);
       setTotalOnChain(total);
       setCreatedReceipts(items);
       ok = true;
@@ -164,11 +160,7 @@ export default function MePage() {
     setRoyaltyLoading(true);
     let ok = false;
     try {
-      const { items } = await getRoyaltyReceiptsPaged(
-        activeAddress,
-        null,
-        10
-      );
+      const { items } = await getRoyaltyReceiptsPaged(activeAddress, null, 10);
       setRoyaltyReceipts(items);
       ok = true;
     } catch (err) {
@@ -471,103 +463,100 @@ export default function MePage() {
                 )}
 
                 {!isLoading && !error && hasOwned && (
-                  <ul className="space-y-3">
+                  <ul className="list-disc space-y-3 pl-4 text-sm text-neutral-800">
                     {ownedReceipts.map((r) => {
                       const date = new Date(r.createdAt * 1000);
                       return (
-                        <li
-                          key={r.id}
-                          className="rounded-xl border border-black bg-white p-4 text-sm">
-                          <div className="flex items-center justify-between gap-2">
-                            <button
-                              type="button"
+                        <li key={r.id} className="pl-1">
+                          <div className="font-semibold">
+                            You Owned:{" "}
+                            <span
                               onClick={() => setSelectedReceipt(r)}
-                              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white">
+                              className="uppercase underline cursor-pointer">
                               Receipt #{r.id}
-                            </button>
-                            <span className="text-[11px] text-neutral-500">
-                              {date.toLocaleString()}
                             </span>
                           </div>
-                          <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
-                            <span className="font-mono wrap-break-word">
-                              Creator: {r.creator.slice(0, 8)}…
-                              {r.creator.slice(-4)}
-                            </span>
+                          <div className="mt-1 text-[11px] text-neutral-500">
+                            {date.toLocaleString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                          <div className="mt-1 text-[11px] text-neutral-600">
+                            Creator:{" "}
                             <a
                               href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
                               target="_blank"
                               rel="noreferrer"
                               className="underline">
-                              View creator
-                            </a>
-                            <span className="font-mono wrap-break-word">
-                              Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
+                              {r.creator.slice(0, 7)} ... {r.creator.slice(-4)}
+                            </a>{" "}
+                            <span className="font-mono">
+                              (View on Explorer)
                             </span>
-                            <a
-                              href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline">
-                              View owner
-                            </a>
-                            <span className="font-mono wrap-break-word">
-                              Royalty to: {r.royaltyRecipient.slice(0, 8)}…
-                              {r.royaltyRecipient.slice(-4)}
-                            </span>
+                          </div>
+                          <div className="mt-1 text-[11px] text-neutral-600">
+                            Royalty to:{" "}
                             <a
                               href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
                               target="_blank"
                               rel="noreferrer"
                               className="underline">
-                              View royalty
-                            </a>
-                            {activeAddress &&
-                              (r.creator === activeAddress ||
-                                r.owner === activeAddress ||
-                                r.royaltyRecipient === activeAddress) && (
-                                <span className="rounded-full border border-black px-2 py-1">
-                                  You are involved
-                                </span>
-                              )}
+                              {r.royaltyRecipient.slice(0, 7)} ...{" "}
+                              {r.royaltyRecipient.slice(-4)}
+                            </a>{" "}
+                            <span className="font-mono">
+                              (View on Explorer)
+                            </span>
                           </div>
                           {activeAddress === r.owner && (
-                            <div className="mt-3 space-y-2">
-                              <label className="text-[11px] uppercase tracking-[0.18em] text-neutral-700">
-                                Transfer to new owner
-                              </label>
-                              <input
-                                type="text"
-                                value={transferInputs[r.id] ?? ""}
-                                onChange={(e) =>
-                                  setTransferInputs((prev) => ({
-                                    ...prev,
-                                    [r.id]: e.target.value,
-                                  }))
-                                }
-                                placeholder="S..."
-                                className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-                              />
-                              {transferErrors[r.id] && (
-                                <p className="text-[11px] text-red-700">
-                                  {transferErrors[r.id]}
-                                </p>
-                              )}
-                              {transferSuccess[r.id] && (
-                                <p className="text-[11px] text-green-700">
-                                  {transferSuccess[r.id]}
-                                </p>
-                              )}
+                            <>
+                              <div className="mt-3 flex flex-col gap-1">
+                                <label className="text-[11px] uppercase tracking-[0.18em]">
+                                  Transfer to new owner
+                                </label>
+                                <input
+                                  type="text"
+                                  value={transferInputs[r.id] ?? ""}
+                                  onChange={(e) =>
+                                    setTransferInputs((prev) => ({
+                                      ...prev,
+                                      [r.id]: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="S..."
+                                  className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                                />
+                              </div>
+                              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
+                                <span>
+                                  This will be stored on-chain and linked to
+                                  your STX address.
+                                </span>
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => handleTransfer(r)}
                                 disabled={!!transferring[r.id]}
-                                className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                                className="mt-3 rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
                                 {transferring[r.id]
                                   ? "Transferring…"
                                   : "Confirm transfer"}
                               </button>
-                            </div>
+                              {transferErrors[r.id] && (
+                                <div className="mt-3 rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
+                                  {transferErrors[r.id]}
+                                </div>
+                              )}
+                              {transferSuccess[r.id] && (
+                                <div className="mt-3 rounded-md border border-green-500 bg-green-50 px-3 py-2 text-xs text-green-700">
+                                  {transferSuccess[r.id]}
+                                </div>
+                              )}
+                            </>
                           )}
                         </li>
                       );

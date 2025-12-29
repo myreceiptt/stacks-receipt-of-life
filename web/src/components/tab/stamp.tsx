@@ -161,7 +161,7 @@ export function StampTab({
               {isGift && (
                 <>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] tracking-[0.18em]">
+                    <label className="text-[11px] uppercase tracking-[0.18em]">
                       RECIPIENT ADDRESS
                     </label>
                     <input

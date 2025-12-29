@@ -127,7 +127,7 @@ export function UpdateTab({
             </p>
             <form onSubmit={onSubmitFees} className="space-y-3 text-sm">
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] tracking-[0.18em]">
+                <label className="text-[11px] uppercase tracking-[0.18em]">
                   STAMP-FEE (µSTX)
                 </label>
                 <input
@@ -138,7 +138,7 @@ export function UpdateTab({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] tracking-[0.18em]">
+                <label className="text-[11px] uppercase tracking-[0.18em]">
                   ROYALTY-FEE (µSTX)
                 </label>
                 <input
