@@ -15,29 +15,18 @@ const readNumber = (key: string) => {
 };
 
 export function useCooldown() {
-  const [cooldownUntil, setCooldownUntil] = useState(0);
-  const [remainingMs, setRemainingMs] = useState(0);
-
-  const syncCooldown = useCallback(() => {
-    const stored = readNumber(COOLDOWN_UNTIL_KEY);
-    setCooldownUntil(stored);
-  }, []);
+  const [cooldownUntil, setCooldownUntil] = useState(() =>
+    readNumber(COOLDOWN_UNTIL_KEY)
+  );
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    syncCooldown();
-  }, [syncCooldown]);
-
-  useEffect(() => {
-    if (!cooldownUntil) {
-      setRemainingMs(0);
-      return;
-    }
+    if (!cooldownUntil) return;
 
     const tick = () => {
-      const now = Date.now();
-      const remaining = Math.max(0, cooldownUntil - now);
-      setRemainingMs(remaining);
-      if (remaining === 0) {
+      const current = Date.now();
+      setNow(current);
+      if (current >= cooldownUntil) {
         if (typeof window !== "undefined") {
           window.localStorage.setItem(COOLDOWN_UNTIL_KEY, "0");
         }
@@ -45,11 +34,11 @@ export function useCooldown() {
       }
     };
 
-    tick();
     const timer = window.setInterval(tick, 250);
     return () => window.clearInterval(timer);
   }, [cooldownUntil]);
 
+  const remainingMs = Math.max(0, cooldownUntil - now);
   const isCooling = remainingMs > 0;
 
   const markSuccess = useCallback(() => {
