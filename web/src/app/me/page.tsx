@@ -10,6 +10,7 @@ import {
   getOwnedReceiptsPaged,
   getCreatedReceiptsPaged,
   getRoyaltyReceiptsPaged,
+  setReceiptRoyaltyRecipient,
   transferReceipt,
   type Receipt,
 } from "@/lib/receipt-contract";
@@ -37,7 +38,13 @@ export default function MePage() {
   const [createdError, setCreatedError] = useState<string | null>(null);
 
   const [royaltyReceipts, setRoyaltyReceipts] = useState<Receipt[]>([]);
+  const [royaltyWindowStart, setRoyaltyWindowStart] = useState<number | null>(
+    null
+  );
+  const [royaltyHasMore, setRoyaltyHasMore] = useState(false);
   const [royaltyLoading, setRoyaltyLoading] = useState(false);
+  const [royaltyLoadingMore, setRoyaltyLoadingMore] = useState(false);
+  const [royaltyError, setRoyaltyError] = useState<string | null>(null);
 
   const [totalOnChain, setTotalOnChain] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +61,22 @@ export default function MePage() {
     Record<number, string>
   >({});
   const [transferring, setTransferring] = useState<Record<number, boolean>>({});
+  const [royaltyInputs, setRoyaltyInputs] = useState<Record<number, string>>(
+    {}
+  );
+  const [royaltyErrors, setRoyaltyErrors] = useState<Record<number, string>>(
+    {}
+  );
+  const [royaltySuccess, setRoyaltySuccess] = useState<Record<number, string>>(
+    {}
+  );
+  const [royaltyUpdating, setRoyaltyUpdating] = useState<
+    Record<number, boolean>
+  >({});
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const hasOwned = ownedReceipts.length > 0;
   const hasCreated = createdReceipts.length > 0;
+  const hasRoyalty = royaltyReceipts.length > 0;
   const hasTotal = typeof totalOnChain === "number" && totalOnChain > 0;
   const isLoading = ownedLoading || createdLoading || royaltyLoading;
   const activeLoading =
@@ -70,9 +90,10 @@ export default function MePage() {
       ? ownedLoadingMore
       : activeTab === "created"
       ? createdLoadingMore
-      : false;
+      : royaltyLoadingMore;
   const ownedPageSize = 10;
   const createdPageSize = 10;
+  const royaltyPageSize = 10;
 
   useEffect(() => {
     if (!isCooling && pendingActionRef.current) {
@@ -145,6 +166,32 @@ export default function MePage() {
     [activeAddress, createdPageSize]
   );
 
+  const fetchRoyaltyWindow = useCallback(
+    async (start: number) => {
+      if (!activeAddress) {
+        return { items: [] as Receipt[], startUsed: 1 };
+      }
+      let currentStart = start;
+      while (true) {
+        const { items } = await getRoyaltyReceiptsPaged(
+          activeAddress,
+          BigInt(currentStart),
+          royaltyPageSize
+        );
+        if (items.length > 0 || currentStart === 1) {
+          const ordered = [...items].sort((a, b) => b.id - a.id);
+          return { items: ordered, startUsed: currentStart };
+        }
+        const nextStart = Math.max(1, currentStart - royaltyPageSize);
+        if (nextStart === currentStart) {
+          return { items: [] as Receipt[], startUsed: currentStart };
+        }
+        currentStart = nextStart;
+      }
+    },
+    [activeAddress, royaltyPageSize]
+  );
+
   const loadOwnedInitial = useCallback(async () => {
     if (!activeAddress) return false;
     setOwnedLoading(true);
@@ -210,18 +257,32 @@ export default function MePage() {
   const loadRoyaltyInitial = useCallback(async () => {
     if (!activeAddress) return false;
     setRoyaltyLoading(true);
+    setRoyaltyError(null);
     let ok = false;
     try {
-      const { items } = await getRoyaltyReceiptsPaged(activeAddress, null, 10);
+      const total = await getLastId();
+      if (total === 0) {
+        setTotalOnChain(0);
+        setRoyaltyReceipts([]);
+        setRoyaltyWindowStart(null);
+        setRoyaltyHasMore(false);
+        ok = true;
+        return ok;
+      }
+      const initialStart = Math.max(1, total - (royaltyPageSize - 1));
+      const { items, startUsed } = await fetchRoyaltyWindow(initialStart);
       setRoyaltyReceipts(items);
+      setRoyaltyWindowStart(startUsed);
+      setRoyaltyHasMore(startUsed > 1);
       ok = true;
     } catch (err) {
       console.error(err);
+      setRoyaltyError("Failed to load royalty receipts from Stacks mainnet.");
     } finally {
       setRoyaltyLoading(false);
     }
     return ok;
-  }, [activeAddress]);
+  }, [activeAddress, fetchRoyaltyWindow, royaltyPageSize]);
 
   const validateStacksAddress = (addr: string) => {
     const trimmed = addr.trim();
@@ -263,6 +324,44 @@ export default function MePage() {
       }));
     } finally {
       setTransferring((prev) => ({ ...prev, [receipt.id]: false }));
+    }
+  };
+
+  const handleRoyaltyUpdate = async (receipt: Receipt) => {
+    if (!activeAddress || receipt.creator !== activeAddress) return;
+    const input = royaltyInputs[receipt.id] ?? "";
+    if (!validateStacksAddress(input)) {
+      setRoyaltyErrors((prev) => ({
+        ...prev,
+        [receipt.id]:
+          "Enter a valid Stacks address (starts with 'S' and looks complete).",
+      }));
+      return;
+    }
+    setRoyaltyErrors((prev) => ({ ...prev, [receipt.id]: "" }));
+    setRoyaltySuccess((prev) => ({ ...prev, [receipt.id]: "" }));
+    setRoyaltyUpdating((prev) => ({ ...prev, [receipt.id]: true }));
+    try {
+      await setReceiptRoyaltyRecipient(receipt.id, input.trim());
+      setRoyaltyInputs((prev) => ({ ...prev, [receipt.id]: "" }));
+      setRoyaltySuccess((prev) => ({
+        ...prev,
+        [receipt.id]:
+          "Royalty recipient updated. New transfers will pay royalties to this address.",
+      }));
+      runWithCooldown(async () => {
+        const ok = await loadRoyaltyInitial();
+        if (ok) markSuccess();
+      });
+    } catch (err) {
+      console.error("Updating royalty recipient failed", err);
+      setRoyaltyErrors((prev) => ({
+        ...prev,
+        [receipt.id]:
+          "Updating royalty recipient failed. Please check that you are the creator and that the new address is valid.",
+      }));
+    } finally {
+      setRoyaltyUpdating((prev) => ({ ...prev, [receipt.id]: false }));
     }
   };
 
@@ -324,13 +423,21 @@ export default function MePage() {
       setCreatedLoadingMore(false);
       setCreatedError(null);
       setRoyaltyReceipts([]);
+      setRoyaltyWindowStart(null);
+      setRoyaltyHasMore(false);
       setRoyaltyLoading(false);
+      setRoyaltyLoadingMore(false);
+      setRoyaltyError(null);
       setTotalOnChain(null);
       setError(null);
       setTransferInputs({});
       setTransferErrors({});
       setTransferSuccess({});
       setTransferring({});
+      setRoyaltyInputs({});
+      setRoyaltyErrors({});
+      setRoyaltySuccess({});
+      setRoyaltyUpdating({});
     }
   }, [activeAddress]);
 
@@ -357,6 +464,7 @@ export default function MePage() {
       return;
     }
     runWithCooldown(async () => {
+      setRoyaltyError(null);
       setRoyaltyLoading(true);
       const ok = await loadRoyaltyInitial();
       if (ok) markSuccess();
@@ -400,6 +508,26 @@ export default function MePage() {
         setCreatedError("Failed to load created receipts. Please try again.");
       } finally {
         setCreatedLoadingMore(false);
+      }
+    });
+  };
+
+  const handleLoadMoreRoyalty = async () => {
+    if (!activeAddress || !royaltyWindowStart || !royaltyHasMore) return;
+    runWithCooldown(async () => {
+      setRoyaltyLoadingMore(true);
+      try {
+        const nextStart = Math.max(1, royaltyWindowStart - royaltyPageSize);
+        const { items, startUsed } = await fetchRoyaltyWindow(nextStart);
+        setRoyaltyReceipts((prev) => [...prev, ...items]);
+        setRoyaltyWindowStart(startUsed);
+        setRoyaltyHasMore(startUsed > 1);
+        markSuccess();
+      } catch (err) {
+        console.error(err);
+        setRoyaltyError("Failed to load royalty receipts. Please try again.");
+      } finally {
+        setRoyaltyLoadingMore(false);
       }
     });
   };
@@ -762,6 +890,158 @@ export default function MePage() {
                           <span className="rounded-full border border-black bg-neutral-50 px-3 py-1 text-[11px] uppercase tracking-[0.18em]">
                             Created: {createdReceipts.length} receipt
                             {createdReceipts.length > 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+              {activeTab === "royalty" && (
+                <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+                  <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+                    Receipts That Give You Royalties
+                  </p>
+
+                  {activeLoading && (
+                    <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+                      Loading on-chain receipts...
+                    </div>
+                  )}
+
+                  {royaltyError && (
+                    <div className="rounded-md border border-dashed border-red-400 bg-red-50 p-3 text-sm text-red-700">
+                      {royaltyError}
+                    </div>
+                  )}
+
+                  {!isLoading && !royaltyError && !hasRoyalty && hasTotal && (
+                    <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+                      There are{" "}
+                      <span className="font-mono">
+                        {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
+                      </span>{" "}
+                      , but none have royalties for you.
+                    </div>
+                  )}
+
+                  {!isLoading && !royaltyError && hasRoyalty && (
+                    <>
+                      <ul className="list-disc space-y-3 pl-4 text-sm text-neutral-800">
+                        {royaltyReceipts.map((r) => {
+                          const date = new Date(r.createdAt * 1000);
+                          return (
+                            <li key={r.id} className="pl-1">
+                              <div className="font-semibold">
+                                Royalty from:{" "}
+                                <span
+                                  onClick={() => setSelectedReceipt(r)}
+                                  className="uppercase underline cursor-pointer">
+                                  Receipt #{r.id}
+                                </span>
+                              </div>
+                              <div className="mt-1 text-[11px] text-neutral-500">
+                                {date.toLocaleString("en-US", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </div>
+                              <div className="mt-1 text-[11px] text-neutral-600">
+                                Creator:{" "}
+                                <a
+                                  href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="underline">
+                                  {r.creator.slice(0, 7)} ...{" "}
+                                  {r.creator.slice(-4)}
+                                </a>{" "}
+                                <span className="font-mono">
+                                  (View on Explorer)
+                                </span>
+                              </div>
+                              <div className="mt-1 text-[11px] text-neutral-600">
+                                Royalty to:{" "}
+                                <a
+                                  href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="underline">
+                                  {r.royaltyRecipient.slice(0, 7)} ...{" "}
+                                  {r.royaltyRecipient.slice(-4)}
+                                </a>{" "}
+                                <span className="font-mono">
+                                  (View on Explorer)
+                                </span>
+                              </div>
+                              {activeAddress === r.creator && (
+                                <>
+                                  <div className="mt-3 flex flex-col gap-1">
+                                    <label className="text-[11px] uppercase tracking-[0.18em]">
+                                      Change royalty recipient
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={royaltyInputs[r.id] ?? ""}
+                                      onChange={(e) =>
+                                        setRoyaltyInputs((prev) => ({
+                                          ...prev,
+                                          [r.id]: e.target.value,
+                                        }))
+                                      }
+                                      placeholder="S..."
+                                      className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                                    />
+                                  </div>
+                                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
+                                    <span>
+                                      This will be stored on-chain and linked to
+                                      your STX address.
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRoyaltyUpdate(r)}
+                                    disabled={!!royaltyUpdating[r.id]}
+                                    className="mt-3 rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-50">
+                                    {royaltyUpdating[r.id]
+                                      ? "Updating..."
+                                      : "Update royalty"}
+                                  </button>
+                                  {royaltyErrors[r.id] && (
+                                    <div className="mt-3 rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
+                                      {royaltyErrors[r.id]}
+                                    </div>
+                                  )}
+                                  {royaltySuccess[r.id] && (
+                                    <div className="mt-3 rounded-md border border-green-500 bg-green-50 px-3 py-2 text-xs text-green-700">
+                                      {royaltySuccess[r.id]}
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      {royaltyHasMore ? (
+                        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={handleLoadMoreRoyalty}
+                            disabled={royaltyLoadingMore}
+                            className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                            {royaltyLoadingMore ? "Loading..." : "Load more"}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                          <span className="rounded-full border border-black bg-neutral-50 px-3 py-1 text-[11px] uppercase tracking-[0.18em]">
+                            Royalty: {royaltyReceipts.length} receipt
+                            {royaltyReceipts.length > 1 ? "s" : ""}
                           </span>
                         </div>
                       )}

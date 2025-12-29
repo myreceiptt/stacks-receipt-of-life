@@ -25,7 +25,7 @@ type ContractStats = {
   version: ContractVersion | null;
 };
 
-type ContractTabProps = {
+type VersionTabProps = {
   version: ContractVersion | null;
   contractId: string;
   loadingData: boolean;
@@ -36,7 +36,7 @@ type ContractTabProps = {
   cooldownMs: number;
 };
 
-export function ContractTab({
+export function VersionTab({
   version,
   contractId,
   loadingData,
@@ -45,7 +45,7 @@ export function ContractTab({
   stats,
   cooling,
   cooldownMs,
-}: ContractTabProps) {
+}: VersionTabProps) {
   if (cooling) {
     return (
       <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">

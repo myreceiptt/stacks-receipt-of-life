@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@/hooks/use-wallet";
 import { useCooldown } from "@/hooks/use-cooldown";
 import { useAppKitAccount } from "@reown/appkit/react";
-import { ContractTab } from "@/components/tab/contract";
+import { VersionTab } from "@/components/tab/version";
 import { StatusTab } from "@/components/tab/status";
 import { UpdateTab } from "@/components/tab/update";
 import {
@@ -86,8 +86,8 @@ export default function ContractPage() {
   const [adminError, setAdminError] = useState<string | null>(null);
   const [isUpdatingAdmin, setIsUpdatingAdmin] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"contract" | "status" | "update">(
-    "contract"
+  const [activeTab, setActiveTab] = useState<"version" | "status" | "update">(
+    "version"
   );
 
   useEffect(() => {
@@ -291,13 +291,13 @@ export default function ContractPage() {
           <div className="flex flex-wrap gap-2 text-[11px]">
             <button
               type="button"
-              onClick={() => setActiveTab("contract")}
+              onClick={() => setActiveTab("version")}
               className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-                activeTab === "contract"
+                activeTab === "version"
                   ? "border-black bg-black text-white hover:bg-white hover:text-black"
                   : "border-black bg-white hover:bg-black hover:text-white"
               }`}>
-              Contract
+              Version
             </button>
             <button
               type="button"
@@ -321,8 +321,8 @@ export default function ContractPage() {
             </button>
           </div>
 
-          {activeTab === "contract" && (
-            <ContractTab
+          {activeTab === "version" && (
+            <VersionTab
               version={version}
               contractId={contractId}
               loadingData={loadingData}
