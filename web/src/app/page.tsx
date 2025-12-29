@@ -67,7 +67,8 @@ export default function HomePage() {
   const maxChars = 160;
   const remaining = maxChars - text.length;
   const isOverLimit = remaining < 0;
-  const feedPageSize = 47;
+  const feedPageSize = 11;
+  const feedApiPageSize = 50;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -195,33 +196,51 @@ export default function HomePage() {
   const fetchFeed = useCallback(
     async (activeAddress: string, page = 1) => {
       const contractId = `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`;
-      const offset = (page - 1) * feedPageSize;
-      const endpoint = `https://api.mainnet.hiro.so/extended/v1/tx?contract_id=${contractId}&limit=${feedPageSize}&offset=${offset}`;
-      const response = await fetch(endpoint);
-      if (!response.ok) {
-        throw new Error("Failed to load contract transactions.");
-      }
-      const data = (await response.json()) as {
-        total?: number;
-        results?: Array<{
-          tx_id: string;
-          sender_address: string;
-          tx_status: string;
-          block_time_iso?: string;
-          burn_block_time_iso?: string;
-          contract_call?: {
-            function_name: string;
-            function_args: unknown[];
-          };
-          tx_result?: { hex?: string };
-        }>;
-      };
+      let offset = 0;
+      let total = 0;
+      const matches: Array<{
+        txid: string;
+        label: string;
+        sender: string;
+        recipient?: string;
+        timestamp?: string;
+      }> = [];
 
-      const items =
-        data.results?.flatMap((tx) => {
-          if (tx.tx_status !== "success") return [];
+      while (true) {
+        const endpoint = `https://api.mainnet.hiro.so/extended/v1/tx?contract_id=${contractId}&limit=${feedApiPageSize}&offset=${offset}`;
+        const response = await fetch(endpoint);
+        if (!response.ok) {
+          throw new Error("Failed to load contract transactions.");
+        }
+        const data = (await response.json()) as {
+          total?: number;
+          results?: Array<{
+            tx_id: string;
+            sender_address: string;
+            tx_status: string;
+            block_time_iso?: string;
+            burn_block_time_iso?: string;
+            contract_call?: {
+              function_name: string;
+              function_args: unknown[];
+            };
+            tx_result?: { hex?: string };
+          }>;
+        };
+
+        if (typeof data.total === "number") {
+          total = data.total;
+        }
+
+        const results = data.results ?? [];
+        if (results.length === 0) {
+          break;
+        }
+
+        for (const tx of results) {
+          if (tx.tx_status !== "success") continue;
           const functionName = tx.contract_call?.function_name;
-          if (!functionName) return [];
+          if (!functionName) continue;
 
           const decodedArgs = (tx.contract_call?.function_args ?? []).map(
             decodeArg
@@ -236,7 +255,7 @@ export default function HomePage() {
           const sender = tx.sender_address;
           const matchesAddress =
             sender === activeAddress || principalArgs.includes(activeAddress);
-          if (!matchesAddress) return [];
+          if (!matchesAddress) continue;
 
           const receiptId = extractReceiptId(tx.tx_result?.hex);
           const recipient =
@@ -283,24 +302,29 @@ export default function HomePage() {
           } else if (functionName === "set-admin") {
             label = `Admin changed to ${shortenAddress(recipient)}`;
           } else {
-            return [];
+            continue;
           }
 
-          return [
-            {
-              txid: tx.tx_id,
-              label,
-              sender,
-              recipient: recipientAddress,
-              timestamp: tx.block_time_iso ?? tx.burn_block_time_iso,
-            },
-          ];
-        }) ?? [];
+          matches.push({
+            txid: tx.tx_id,
+            label,
+            sender,
+            recipient: recipientAddress,
+            timestamp: tx.block_time_iso ?? tx.burn_block_time_iso,
+          });
+        }
 
-      const total = typeof data.total === "number" ? data.total : 0;
-      return { items, total };
+        offset += feedApiPageSize;
+        if (total && offset >= total) {
+          break;
+        }
+      }
+
+      const startIndex = (page - 1) * feedPageSize;
+      const items = matches.slice(startIndex, startIndex + feedPageSize);
+      return { items, total: matches.length };
     },
-    [feedPageSize]
+    [feedApiPageSize, feedPageSize]
   );
 
   const handleRefresh = useCallback(async () => {
