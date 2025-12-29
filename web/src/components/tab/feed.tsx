@@ -6,6 +6,7 @@ type FeedItem = {
   sender: string;
   recipient?: string;
   timestamp?: string;
+  receiptId?: number | null;
 };
 
 type FeedTabProps = {
@@ -15,6 +16,7 @@ type FeedTabProps = {
   feedPage: number;
   totalFeedPages: number;
   onPageChange: (page: number) => void;
+  onReceiptSelect: (id: number) => void;
   feedCooling: boolean;
   cooldownMs: number;
 };
@@ -26,6 +28,7 @@ export function FeedTab({
   feedPage,
   totalFeedPages,
   onPageChange,
+  onReceiptSelect,
   feedCooling,
   cooldownMs,
 }: FeedTabProps) {
@@ -70,7 +73,29 @@ export function FeedTab({
         <ul className="list-disc space-y-3 pl-4 text-sm text-neutral-800">
           {feedItems.map((item) => (
             <li key={item.txid} className="pl-1">
-              <div className="font-semibold">{item.label}</div>
+              <div className="font-semibold">
+                {item.receiptId != null ? (
+                  (() => {
+                    const token = `RECEIPT #${item.receiptId}`;
+                    if (!item.label.includes(token)) return item.label;
+                    const [before, after] = item.label.split(token);
+                    return (
+                      <>
+                        {before}
+                        <button
+                          type="button"
+                          onClick={() => onReceiptSelect(item.receiptId!)}
+                          className="uppercase underline">
+                          {token}
+                        </button>
+                        {after}
+                      </>
+                    );
+                  })()
+                ) : (
+                  item.label
+                )}
+              </div>
               {item.timestamp && (
                 <div className="mt-1 text-[11px] text-neutral-500">
                   {new Date(item.timestamp).toLocaleString("en-US", {

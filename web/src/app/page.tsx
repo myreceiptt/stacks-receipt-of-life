@@ -7,13 +7,16 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import { cvToJSON, hexToCV } from "@stacks/transactions";
 import { FeedTab } from "@/components/tab/feed";
 import { StampTab } from "@/components/tab/stamp";
+import { ReceiptModal } from "@/components/receipt-modal";
 import {
   CONTRACT_ADDRESS,
   CONTRACT_NAME,
   getConfig,
+  getReceipt,
   getStats,
   submitReceipt,
   submitReceiptFor,
+  type Receipt,
 } from "@/lib/receipt-contract";
 
 export default function HomePage() {
@@ -58,12 +61,14 @@ export default function HomePage() {
       sender: string;
       recipient?: string;
       timestamp?: string;
+      receiptId?: number | null;
     }>
   >([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [feedPage, setFeedPage] = useState(1);
   const [feedTotal, setFeedTotal] = useState(0);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
 
   const shortenAddress = (value?: string) =>
     value ? `${value.slice(0, 8)}…${value.slice(-4)}` : "unknown";
@@ -227,6 +232,7 @@ export default function HomePage() {
         sender: string;
         recipient?: string;
         timestamp?: string;
+        receiptId?: number | null;
       }> = [];
 
       while (true) {
@@ -289,33 +295,40 @@ export default function HomePage() {
 
           let label = "";
           let recipientAddress = recipient;
+          let receiptIdValue: number | null = null;
           if (functionName === "submit-receipt") {
             recipientAddress = sender;
-            label = `Stamp Receipt ID ${receiptId ?? "?"} for Self`;
+            receiptIdValue = receiptId ?? null;
+            label = `Stamp RECEIPT #${receiptId ?? "?"} for Self`;
           } else if (functionName === "submit-receipt-for") {
+            receiptIdValue = receiptId ?? null;
             if (recipient === activeAddress && sender !== activeAddress) {
-              label = `Receive Receipt ID ${
+              label = `Receive RECEIPT #${
                 receiptId ?? "?"
               } from ${shortenAddress(sender)}`;
             } else {
-              label = `Stamp Receipt ID ${
+              label = `Stamp RECEIPT #${
                 receiptId ?? "?"
               } as Gift to ${shortenAddress(recipient)}`;
             }
           } else if (functionName === "transfer-receipt") {
             const transferId = idArg ?? receiptId ?? "?";
+            receiptIdValue =
+              typeof transferId === "number" ? transferId : receiptId ?? null;
             if (recipient === activeAddress && sender !== activeAddress) {
-              label = `Receive Receipt ID ${
+              label = `Receive RECEIPT #${
                 transferId
               } from ${shortenAddress(sender)}`;
             } else {
-              label = `Transfer Receipt ID ${
+              label = `Transfer RECEIPT #${
                 transferId
               } to ${shortenAddress(recipient)}`;
             }
           } else if (functionName === "set-receipt-royalty-recipient") {
             const targetId = idArg ?? receiptId ?? "?";
-            label = `Royalty recipient updated for Receipt ID ${targetId} to ${shortenAddress(
+            receiptIdValue =
+              typeof targetId === "number" ? targetId : receiptId ?? null;
+            label = `Royalty recipient updated for RECEIPT #${targetId} to ${shortenAddress(
               recipient
             )}`;
           } else if (functionName === "set-fees") {
@@ -334,6 +347,7 @@ export default function HomePage() {
             sender,
             recipient: recipientAddress,
             timestamp: tx.block_time_iso ?? tx.burn_block_time_iso,
+            receiptId: receiptIdValue,
           });
         }
 
@@ -437,6 +451,21 @@ export default function HomePage() {
       runWithCooldown,
       totalFeedPages,
     ]
+  );
+
+  const handleReceiptSelect = useCallback(
+    async (id: number) => {
+      if (!activeAddress) return;
+      try {
+        const receipt = await getReceipt(id, activeAddress);
+        if (receipt) {
+          setSelectedReceipt(receipt);
+        }
+      } catch (err) {
+        console.error("Failed to load receipt", err);
+      }
+    },
+    [activeAddress]
   );
 
   useEffect(() => {
@@ -553,10 +582,16 @@ export default function HomePage() {
               feedPage={feedPage}
               totalFeedPages={totalFeedPages}
               onPageChange={handleFeedPageChange}
+              onReceiptSelect={handleReceiptSelect}
               feedCooling={isCooling}
               cooldownMs={remainingMs}
             />
           )}
+          <ReceiptModal
+            isOpen={!!selectedReceipt}
+            onClose={() => setSelectedReceipt(null)}
+            receipt={selectedReceipt}
+          />
         </div>
       )}
     </section>

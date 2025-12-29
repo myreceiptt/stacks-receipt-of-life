@@ -108,7 +108,7 @@ export function StampTab({
           <div className="space-y-2">
             <span className="font-semibold">Write Your Receipt:</span>{" "}
             <span className="font-mono wrap-break-word">
-              Receipt ID {stats.lastId + 1} to be stamped.
+              RECEIPT #{stats.lastId + 1} to be stamped.
             </span>
             <p className="text-xs text-neutral-600">
               Use a variety of characters, but limit to 160 characters.

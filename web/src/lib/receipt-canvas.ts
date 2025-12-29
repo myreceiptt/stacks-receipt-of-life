@@ -130,7 +130,7 @@ export async function renderReceiptImage({
 
   const creatorShort = `${creator.slice(0, 7)} ... ${creator.slice(-4)}`;
   const metaLines = [
-    `Receipt ID: ${receiptId}`,
+    `RECEIPT #: ${receiptId}`,
     `Date: ${createdAtLabel}`,
     `Creator: ${creatorShort}`,
   ];
