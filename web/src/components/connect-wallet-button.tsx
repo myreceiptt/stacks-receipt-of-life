@@ -63,7 +63,7 @@ export function ConnectWalletButton() {
     <>
       <button
         onClick={() => setModalOpen(true)}
-        className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-60">
+        className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
         {isConnecting ? "Connect Wallet" : short}
       </button>
       {isModalOpen ? (
@@ -92,7 +92,7 @@ export function ConnectWalletButton() {
                     setModalOpen(false);
                   }}
                   disabled={isConnecting}
-                  className="w-full rounded-xl border border-black bg-black px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black disabled:opacity-60">
+                  className="w-full rounded-xl border border-black bg-black px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black disabled:opacity-50">
                   {isConnecting ? "Connecting…" : "Connect Stacks wallet"}
                 </button>
                 <button

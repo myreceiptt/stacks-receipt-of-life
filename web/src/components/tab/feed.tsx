@@ -139,7 +139,7 @@ export function FeedTab({
             type="button"
             onClick={() => onPageChange(feedPage - 1)}
             disabled={feedPage === 1}
-            className="rounded-full border border-black bg-white px-3 py-1 uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-40">
+            className="rounded-full border border-black bg-white px-3 py-1 uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
             Prev
           </button>
           {Array.from({ length: totalFeedPages }, (_, idx) => idx + 1)
@@ -171,7 +171,7 @@ export function FeedTab({
             type="button"
             onClick={() => onPageChange(feedPage + 1)}
             disabled={totalFeedPages > 0 && feedPage >= totalFeedPages}
-            className="rounded-full border border-black bg-white px-3 py-1 uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-40">
+            className="rounded-full border border-black bg-white px-3 py-1 uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
             Next
           </button>
         </div>

@@ -130,7 +130,7 @@ export default function MePage() {
       ok = true;
     } catch (err) {
       console.error(err);
-      setError("Failed to load receipts from Stacks mainnet.");
+      setError("Failed to load your receipts. Please try again later.");
     } finally {
       setOwnedLoading(false);
     }
@@ -320,7 +320,7 @@ export default function MePage() {
         markSuccess();
       } catch (err) {
         console.error(err);
-        setError("Failed to load more owned receipts.");
+        setError("Failed to load your receipts. Please try again later.");
       } finally {
         setOwnedLoadingMore(false);
       }
@@ -357,7 +357,7 @@ export default function MePage() {
               type="button"
               onClick={handleRefresh}
               disabled={!activeAddress || activeLoading || isCooling}
-              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-40">
+              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
               {activeRefreshing || activeLoading ? "Refreshing…" : "Refresh"}
             </button>
           </div>
@@ -463,123 +463,126 @@ export default function MePage() {
                 )}
 
                 {!isLoading && !error && hasOwned && (
-                  <ul className="list-disc space-y-3 pl-4 text-sm text-neutral-800">
-                    {ownedReceipts.map((r) => {
-                      const date = new Date(r.createdAt * 1000);
-                      return (
-                        <li key={r.id} className="pl-1">
-                          <div className="font-semibold">
-                            You Owned:{" "}
-                            <span
-                              onClick={() => setSelectedReceipt(r)}
-                              className="uppercase underline cursor-pointer">
-                              Receipt #{r.id}
-                            </span>
-                          </div>
-                          <div className="mt-1 text-[11px] text-neutral-500">
-                            {date.toLocaleString("en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </div>
-                          <div className="mt-1 text-[11px] text-neutral-600">
-                            Creator:{" "}
-                            <a
-                              href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline">
-                              {r.creator.slice(0, 7)} ... {r.creator.slice(-4)}
-                            </a>{" "}
-                            <span className="font-mono">
-                              (View on Explorer)
-                            </span>
-                          </div>
-                          <div className="mt-1 text-[11px] text-neutral-600">
-                            Royalty to:{" "}
-                            <a
-                              href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline">
-                              {r.royaltyRecipient.slice(0, 7)} ...{" "}
-                              {r.royaltyRecipient.slice(-4)}
-                            </a>{" "}
-                            <span className="font-mono">
-                              (View on Explorer)
-                            </span>
-                          </div>
-                          {activeAddress === r.owner && (
-                            <>
-                              <div className="mt-3 flex flex-col gap-1">
-                                <label className="text-[11px] uppercase tracking-[0.18em]">
-                                  Transfer to new owner
-                                </label>
-                                <input
-                                  type="text"
-                                  value={transferInputs[r.id] ?? ""}
-                                  onChange={(e) =>
-                                    setTransferInputs((prev) => ({
-                                      ...prev,
-                                      [r.id]: e.target.value,
-                                    }))
-                                  }
-                                  placeholder="S..."
-                                  className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-                                />
-                              </div>
-                              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
-                                <span>
-                                  This will be stored on-chain and linked to
-                                  your STX address.
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleTransfer(r)}
-                                disabled={!!transferring[r.id]}
-                                className="mt-3 rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
-                                {transferring[r.id]
-                                  ? "Transferring…"
-                                  : "Confirm transfer"}
-                              </button>
-                              {transferErrors[r.id] && (
-                                <div className="mt-3 rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
-                                  {transferErrors[r.id]}
+                  <>
+                    <ul className="list-disc space-y-3 pl-4 text-sm text-neutral-800">
+                      {ownedReceipts.map((r) => {
+                        const date = new Date(r.createdAt * 1000);
+                        return (
+                          <li key={r.id} className="pl-1">
+                            <div className="font-semibold">
+                              You Owned:{" "}
+                              <span
+                                onClick={() => setSelectedReceipt(r)}
+                                className="uppercase underline cursor-pointer">
+                                Receipt #{r.id}
+                              </span>
+                            </div>
+                            <div className="mt-1 text-[11px] text-neutral-500">
+                              {date.toLocaleString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                            <div className="mt-1 text-[11px] text-neutral-600">
+                              Creator:{" "}
+                              <a
+                                href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline">
+                                {r.creator.slice(0, 7)} ...{" "}
+                                {r.creator.slice(-4)}
+                              </a>{" "}
+                              <span className="font-mono">
+                                (View on Explorer)
+                              </span>
+                            </div>
+                            <div className="mt-1 text-[11px] text-neutral-600">
+                              Royalty to:{" "}
+                              <a
+                                href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline">
+                                {r.royaltyRecipient.slice(0, 7)} ...{" "}
+                                {r.royaltyRecipient.slice(-4)}
+                              </a>{" "}
+                              <span className="font-mono">
+                                (View on Explorer)
+                              </span>
+                            </div>
+                            {activeAddress === r.owner && (
+                              <>
+                                <div className="mt-3 flex flex-col gap-1">
+                                  <label className="text-[11px] uppercase tracking-[0.18em]">
+                                    Transfer to new owner
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={transferInputs[r.id] ?? ""}
+                                    onChange={(e) =>
+                                      setTransferInputs((prev) => ({
+                                        ...prev,
+                                        [r.id]: e.target.value,
+                                      }))
+                                    }
+                                    placeholder="S..."
+                                    className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                                  />
                                 </div>
-                              )}
-                              {transferSuccess[r.id] && (
-                                <div className="mt-3 rounded-md border border-green-500 bg-green-50 px-3 py-2 text-xs text-green-700">
-                                  {transferSuccess[r.id]}
+                                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-neutral-600">
+                                  <span>
+                                    This will be stored on-chain and linked to
+                                    your STX address.
+                                  </span>
                                 </div>
-                              )}
-                            </>
-                          )}
-                        </li>
-                      );
-                    })}
+                                <button
+                                  type="button"
+                                  onClick={() => handleTransfer(r)}
+                                  disabled={!!transferring[r.id]}
+                                  className="mt-3 rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-50">
+                                  {transferring[r.id]
+                                    ? "Transferring…"
+                                    : "Confirm transfer"}
+                                </button>
+                                {transferErrors[r.id] && (
+                                  <div className="mt-3 rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
+                                    {transferErrors[r.id]}
+                                  </div>
+                                )}
+                                {transferSuccess[r.id] && (
+                                  <div className="mt-3 rounded-md border border-green-500 bg-green-50 px-3 py-2 text-xs text-green-700">
+                                    {transferSuccess[r.id]}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
                     {ownedHasMore ? (
-                      <li>
+                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
                         <button
                           type="button"
                           onClick={handleLoadMoreOwned}
                           disabled={ownedLoadingMore}
-                          className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
-                          {ownedLoadingMore ? "Loading…" : "Load more"}
+                          className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                          {ownedLoadingMore ? "Loading..." : "Load more"}
                         </button>
-                      </li>
+                      </div>
                     ) : (
-                      <li className="text-[11px]">
-                        <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
-                          Owned · {ownedReceipts.length} receipt
+                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                        <span className="rounded-full border border-black bg-neutral-50 px-3 py-1 text-[11px] uppercase tracking-[0.18em]">
+                          Owned: {ownedReceipts.length} receipt
                           {ownedReceipts.length > 1 ? "s" : ""}
                         </span>
-                      </li>
+                      </div>
                     )}
-                  </ul>
+                  </>
                 )}
               </div>
             )

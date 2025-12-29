@@ -233,7 +233,7 @@ export default function HomePage() {
         const endpoint = `https://api.mainnet.hiro.so/extended/v1/tx?contract_id=${contractId}&limit=${feedApiPageSize}&offset=${offset}`;
         const response = await fetch(endpoint);
         if (!response.ok) {
-          throw new Error("Failed to load contract transactions.");
+          throw new Error("Failed to load contract transactions. Please try again later.");
         }
         const data = (await response.json()) as {
           total?: number;
@@ -467,7 +467,7 @@ export default function HomePage() {
               type="button"
               onClick={handleRefresh}
               disabled={!activeAddress || loadingData || isCooling}
-              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-40">
+              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
               {isRefreshing || loadingData ? "Refreshing…" : "Refresh"}
             </button>
           </div>

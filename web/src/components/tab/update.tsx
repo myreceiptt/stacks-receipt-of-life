@@ -156,7 +156,7 @@ export function UpdateTab({
               <button
                 type="submit"
                 disabled={isUpdatingFees}
-                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
+                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-50">
                 {isUpdatingFees ? "Updating…" : "Update Fees"}
               </button>
               {feeError && (
@@ -199,7 +199,7 @@ export function UpdateTab({
               <button
                 type="submit"
                 disabled={isUpdatingAdmin}
-                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
+                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-50">
                 {isUpdatingAdmin ? "Updating…" : "Change Admin"}
               </button>
               {adminError && (
