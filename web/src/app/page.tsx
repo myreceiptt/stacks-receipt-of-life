@@ -1,24 +1,31 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@/hooks/use-wallet";
+import { useCooldown } from "@/hooks/use-cooldown";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { cvToJSON, hexToCV } from "@stacks/transactions";
 import { FeedTab } from "@/components/tab/feed";
 import { StampTab } from "@/components/tab/stamp";
+import { ReceiptModal } from "@/components/receipt-modal";
 import {
   CONTRACT_ADDRESS,
   CONTRACT_NAME,
   getConfig,
+  getReceipt,
   getStats,
   submitReceipt,
   submitReceiptFor,
+  type Receipt,
 } from "@/lib/receipt-contract";
 
 export default function HomePage() {
   const { address } = useWallet();
   const { address: wcAddress } = useAppKitAccount({ namespace: "stacks" });
   const activeAddress = address ?? wcAddress ?? null;
+  const { isCooling, remainingMs, markSuccess, startCooldownIfNeeded } =
+    useCooldown();
+  const pendingActionRef = useRef<null | (() => Promise<void>)>(null);
   const [text, setText] = useState("");
   const [isGift, setIsGift] = useState(false);
   const [recipientAddress, setRecipientAddress] = useState("");
@@ -54,12 +61,14 @@ export default function HomePage() {
       sender: string;
       recipient?: string;
       timestamp?: string;
+      receiptId?: number | null;
     }>
   >([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [feedPage, setFeedPage] = useState(1);
   const [feedTotal, setFeedTotal] = useState(0);
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
 
   const shortenAddress = (value?: string) =>
     value ? `${value.slice(0, 8)}…${value.slice(-4)}` : "unknown";
@@ -67,7 +76,27 @@ export default function HomePage() {
   const maxChars = 160;
   const remaining = maxChars - text.length;
   const isOverLimit = remaining < 0;
-  const feedPageSize = 47;
+  const feedPageSize = 11;
+  const feedApiPageSize = 50;
+
+  useEffect(() => {
+    if (!isCooling && pendingActionRef.current) {
+      const action = pendingActionRef.current;
+      pendingActionRef.current = null;
+      action();
+    }
+  }, [isCooling]);
+
+  const runWithCooldown = useCallback(
+    (action: () => Promise<void>) => {
+      if (startCooldownIfNeeded()) {
+        pendingActionRef.current = action;
+        return;
+      }
+      action();
+    },
+    [startCooldownIfNeeded]
+  );
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -195,33 +224,52 @@ export default function HomePage() {
   const fetchFeed = useCallback(
     async (activeAddress: string, page = 1) => {
       const contractId = `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`;
-      const offset = (page - 1) * feedPageSize;
-      const endpoint = `https://api.mainnet.hiro.so/extended/v1/tx?contract_id=${contractId}&limit=${feedPageSize}&offset=${offset}`;
-      const response = await fetch(endpoint);
-      if (!response.ok) {
-        throw new Error("Failed to load contract transactions.");
-      }
-      const data = (await response.json()) as {
-        total?: number;
-        results?: Array<{
-          tx_id: string;
-          sender_address: string;
-          tx_status: string;
-          block_time_iso?: string;
-          burn_block_time_iso?: string;
-          contract_call?: {
-            function_name: string;
-            function_args: unknown[];
-          };
-          tx_result?: { hex?: string };
-        }>;
-      };
+      let offset = 0;
+      let total = 0;
+      const matches: Array<{
+        txid: string;
+        label: string;
+        sender: string;
+        recipient?: string;
+        timestamp?: string;
+        receiptId?: number | null;
+      }> = [];
 
-      const items =
-        data.results?.flatMap((tx) => {
-          if (tx.tx_status !== "success") return [];
+      while (true) {
+        const endpoint = `https://api.mainnet.hiro.so/extended/v1/tx?contract_id=${contractId}&limit=${feedApiPageSize}&offset=${offset}`;
+        const response = await fetch(endpoint);
+        if (!response.ok) {
+          throw new Error("Failed to load contract transactions. Please try again later.");
+        }
+        const data = (await response.json()) as {
+          total?: number;
+          results?: Array<{
+            tx_id: string;
+            sender_address: string;
+            tx_status: string;
+            block_time_iso?: string;
+            burn_block_time_iso?: string;
+            contract_call?: {
+              function_name: string;
+              function_args: unknown[];
+            };
+            tx_result?: { hex?: string };
+          }>;
+        };
+
+        if (typeof data.total === "number") {
+          total = data.total;
+        }
+
+        const results = data.results ?? [];
+        if (results.length === 0) {
+          break;
+        }
+
+        for (const tx of results) {
+          if (tx.tx_status !== "success") continue;
           const functionName = tx.contract_call?.function_name;
-          if (!functionName) return [];
+          if (!functionName) continue;
 
           const decodedArgs = (tx.contract_call?.function_args ?? []).map(
             decodeArg
@@ -236,7 +284,7 @@ export default function HomePage() {
           const sender = tx.sender_address;
           const matchesAddress =
             sender === activeAddress || principalArgs.includes(activeAddress);
-          if (!matchesAddress) return [];
+          if (!matchesAddress) continue;
 
           const receiptId = extractReceiptId(tx.tx_result?.hex);
           const recipient =
@@ -247,33 +295,40 @@ export default function HomePage() {
 
           let label = "";
           let recipientAddress = recipient;
+          let receiptIdValue: number | null = null;
           if (functionName === "submit-receipt") {
             recipientAddress = sender;
-            label = `Stamp Receipt ID ${receiptId ?? "?"} for Self`;
+            receiptIdValue = receiptId ?? null;
+            label = `Stamp RECEIPT #${receiptId ?? "?"} for Self`;
           } else if (functionName === "submit-receipt-for") {
+            receiptIdValue = receiptId ?? null;
             if (recipient === activeAddress && sender !== activeAddress) {
-              label = `Receive Receipt ID ${
+              label = `Receive RECEIPT #${
                 receiptId ?? "?"
               } from ${shortenAddress(sender)}`;
             } else {
-              label = `Stamp Receipt ID ${
+              label = `Stamp RECEIPT #${
                 receiptId ?? "?"
               } as Gift to ${shortenAddress(recipient)}`;
             }
           } else if (functionName === "transfer-receipt") {
             const transferId = idArg ?? receiptId ?? "?";
+            receiptIdValue =
+              typeof transferId === "number" ? transferId : receiptId ?? null;
             if (recipient === activeAddress && sender !== activeAddress) {
-              label = `Receive Receipt ID ${
+              label = `Receive RECEIPT #${
                 transferId
               } from ${shortenAddress(sender)}`;
             } else {
-              label = `Transfer Receipt ID ${
+              label = `Transfer RECEIPT #${
                 transferId
               } to ${shortenAddress(recipient)}`;
             }
           } else if (functionName === "set-receipt-royalty-recipient") {
             const targetId = idArg ?? receiptId ?? "?";
-            label = `Royalty recipient updated for Receipt ID ${targetId} to ${shortenAddress(
+            receiptIdValue =
+              typeof targetId === "number" ? targetId : receiptId ?? null;
+            label = `Royalty recipient updated for RECEIPT #${targetId} to ${shortenAddress(
               recipient
             )}`;
           } else if (functionName === "set-fees") {
@@ -283,27 +338,33 @@ export default function HomePage() {
           } else if (functionName === "set-admin") {
             label = `Admin changed to ${shortenAddress(recipient)}`;
           } else {
-            return [];
+            continue;
           }
 
-          return [
-            {
-              txid: tx.tx_id,
-              label,
-              sender,
-              recipient: recipientAddress,
-              timestamp: tx.block_time_iso ?? tx.burn_block_time_iso,
-            },
-          ];
-        }) ?? [];
+          matches.push({
+            txid: tx.tx_id,
+            label,
+            sender,
+            recipient: recipientAddress,
+            timestamp: tx.block_time_iso ?? tx.burn_block_time_iso,
+            receiptId: receiptIdValue,
+          });
+        }
 
-      const total = typeof data.total === "number" ? data.total : 0;
-      return { items, total };
+        offset += feedApiPageSize;
+        if (total && offset >= total) {
+          break;
+        }
+      }
+
+      const startIndex = (page - 1) * feedPageSize;
+      const items = matches.slice(startIndex, startIndex + feedPageSize);
+      return { items, total: matches.length };
     },
-    [feedPageSize]
+    [feedApiPageSize, feedPageSize]
   );
 
-  const handleRefresh = useCallback(async () => {
+  const performRefresh = useCallback(async () => {
     if (!activeAddress) return;
     setLoadingData(true);
     setIsRefreshing(true);
@@ -313,12 +374,16 @@ export default function HomePage() {
     setTxId(null);
     setFeedLoading(true);
     setFeedError(null);
+    let configOk = false;
+    let feedOk = false;
     try {
       const [cfg, st] = await Promise.all([getConfig(), getStats()]);
       if (cfg) setConfigState(cfg);
       if (st) setStatsState(st);
       if (!cfg || !st) {
         setDataError("Unable to fetch on-chain data. Please try again.");
+      } else {
+        configOk = true;
       }
     } catch (err) {
       console.error(err);
@@ -332,6 +397,7 @@ export default function HomePage() {
       setFeedItems(items);
       setFeedTotal(total);
       setFeedPage(1);
+      feedOk = true;
     } catch (err) {
       console.error(err);
       setFeedError(
@@ -339,33 +405,68 @@ export default function HomePage() {
       );
     }
 
+    if (configOk && feedOk) {
+      markSuccess();
+    }
     setLoadingData(false);
     setFeedLoading(false);
     setIsRefreshing(false);
-  }, [activeAddress, fetchFeed]);
+  }, [activeAddress, fetchFeed, markSuccess]);
+
+  const handleRefresh = useCallback(() => {
+    runWithCooldown(performRefresh);
+  }, [performRefresh, runWithCooldown]);
 
   const totalFeedPages =
     feedTotal > 0 ? Math.ceil(feedTotal / feedPageSize) : 0;
 
-  const handleFeedPageChange = async (nextPage: number) => {
-    if (!activeAddress || feedLoading) return;
-    if (nextPage < 1 || (totalFeedPages > 0 && nextPage > totalFeedPages)) {
-      return;
-    }
-    setFeedLoading(true);
-    setFeedError(null);
-    try {
-      const { items, total } = await fetchFeed(activeAddress, nextPage);
-      setFeedItems(items);
-      setFeedTotal(total);
-      setFeedPage(nextPage);
-    } catch (err) {
-      console.error(err);
-      setFeedError("Unable to load feed items.");
-    } finally {
-      setFeedLoading(false);
-    }
-  };
+  const handleFeedPageChange = useCallback(
+    (nextPage: number) => {
+      if (!activeAddress || feedLoading) return;
+      if (nextPage < 1 || (totalFeedPages > 0 && nextPage > totalFeedPages)) {
+        return;
+      }
+      runWithCooldown(async () => {
+        setFeedLoading(true);
+        setFeedError(null);
+        try {
+          const { items, total } = await fetchFeed(activeAddress, nextPage);
+          setFeedItems(items);
+          setFeedTotal(total);
+          setFeedPage(nextPage);
+          markSuccess();
+        } catch (err) {
+          console.error(err);
+          setFeedError("Unable to load feed items.");
+        } finally {
+          setFeedLoading(false);
+        }
+      });
+    },
+    [
+      activeAddress,
+      feedLoading,
+      fetchFeed,
+      markSuccess,
+      runWithCooldown,
+      totalFeedPages,
+    ]
+  );
+
+  const handleReceiptSelect = useCallback(
+    async (id: number) => {
+      if (!activeAddress) return;
+      try {
+        const receipt = await getReceipt(id, activeAddress);
+        if (receipt) {
+          setSelectedReceipt(receipt);
+        }
+      } catch (err) {
+        console.error("Failed to load receipt", err);
+      }
+    },
+    [activeAddress]
+  );
 
   useEffect(() => {
     if (!activeAddress) return;
@@ -394,8 +495,8 @@ export default function HomePage() {
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={!activeAddress || loadingData}
-              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40">
+              disabled={!activeAddress || loadingData || isCooling}
+              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
               {isRefreshing || loadingData ? "Refreshing…" : "Refresh"}
             </button>
           </div>
@@ -430,8 +531,8 @@ export default function HomePage() {
               onClick={() => setActiveTab("stamp")}
               className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
                 activeTab === "stamp"
-                  ? "border-black bg-black text-white"
-                  : "border-black bg-white"
+                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                  : "border-black bg-white hover:bg-black hover:text-white"
               }`}>
               Stamp
             </button>
@@ -440,8 +541,8 @@ export default function HomePage() {
               onClick={() => setActiveTab("feed")}
               className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
                 activeTab === "feed"
-                  ? "border-black bg-black text-white"
-                  : "border-black bg-white"
+                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                  : "border-black bg-white hover:bg-black hover:text-white"
               }`}>
               Feed
             </button>
@@ -453,6 +554,8 @@ export default function HomePage() {
               dataError={dataError}
               config={config}
               stats={stats}
+              cooling={isCooling}
+              cooldownMs={remainingMs}
               isOverLimit={isOverLimit}
               remaining={remaining}
               isGift={isGift}
@@ -479,8 +582,16 @@ export default function HomePage() {
               feedPage={feedPage}
               totalFeedPages={totalFeedPages}
               onPageChange={handleFeedPageChange}
+              onReceiptSelect={handleReceiptSelect}
+              feedCooling={isCooling}
+              cooldownMs={remainingMs}
             />
           )}
+          <ReceiptModal
+            isOpen={!!selectedReceipt}
+            onClose={() => setSelectedReceipt(null)}
+            receipt={selectedReceipt}
+          />
         </div>
       )}
     </section>

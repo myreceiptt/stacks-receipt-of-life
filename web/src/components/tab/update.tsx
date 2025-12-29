@@ -31,6 +31,8 @@ type UpdateTabProps = {
   version: ContractVersion | null;
   config: ContractConfig | null;
   stats: ContractStats | null;
+  cooling: boolean;
+  cooldownMs: number;
   isAdmin: boolean;
   address: string | null;
   feeStampInput: string;
@@ -56,6 +58,8 @@ export function UpdateTab({
   version,
   config,
   stats,
+  cooling,
+  cooldownMs,
   isAdmin,
   address,
   feeStampInput,
@@ -74,6 +78,19 @@ export function UpdateTab({
   onSubmitAdmin,
   shorten,
 }: UpdateTabProps) {
+  if (cooling) {
+    return (
+      <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+        <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+          Update Contract
+        </p>
+        <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+          Cooling down for {Math.max(0, Math.ceil(cooldownMs))} milliseconds and
+          then loading on-chain data...
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
       <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
@@ -110,7 +127,7 @@ export function UpdateTab({
             </p>
             <form onSubmit={onSubmitFees} className="space-y-3 text-sm">
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] tracking-[0.18em]">
+                <label className="text-[11px] uppercase tracking-[0.18em]">
                   STAMP-FEE (µSTX)
                 </label>
                 <input
@@ -121,7 +138,7 @@ export function UpdateTab({
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] tracking-[0.18em]">
+                <label className="text-[11px] uppercase tracking-[0.18em]">
                   ROYALTY-FEE (µSTX)
                 </label>
                 <input
@@ -139,7 +156,7 @@ export function UpdateTab({
               <button
                 type="submit"
                 disabled={isUpdatingFees}
-                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
+                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-50">
                 {isUpdatingFees ? "Updating…" : "Update Fees"}
               </button>
               {feeError && (
@@ -182,7 +199,7 @@ export function UpdateTab({
               <button
                 type="submit"
                 disabled={isUpdatingAdmin}
-                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
+                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-50">
                 {isUpdatingAdmin ? "Updating…" : "Change Admin"}
               </button>
               {adminError && (

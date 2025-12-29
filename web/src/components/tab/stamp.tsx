@@ -30,6 +30,8 @@ type StampTabProps = {
   dataError: string | null;
   config: ContractConfig | null;
   stats: ContractStats | null;
+  cooling: boolean;
+  cooldownMs: number;
   isOverLimit: boolean;
   remaining: number;
   isGift: boolean;
@@ -52,6 +54,8 @@ export function StampTab({
   dataError,
   config,
   stats,
+  cooling,
+  cooldownMs,
   isOverLimit,
   remaining,
   isGift,
@@ -68,6 +72,19 @@ export function StampTab({
   onGiftChange,
   onRecipientChange,
 }: StampTabProps) {
+  if (cooling) {
+    return (
+      <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+        <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+          Stamp a Receipt
+        </p>
+        <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+          Cooling down for {Math.max(0, Math.ceil(cooldownMs))} milliseconds and
+          then loading on-chain data...
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
       <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
@@ -91,7 +108,7 @@ export function StampTab({
           <div className="space-y-2">
             <span className="font-semibold">Write Your Receipt:</span>{" "}
             <span className="font-mono wrap-break-word">
-              Receipt ID {stats.lastId + 1} to be stamped.
+              RECEIPT #{stats.lastId + 1} to be stamped.
             </span>
             <p className="text-xs text-neutral-600">
               Use a variety of characters, but limit to 160 characters.
@@ -125,8 +142,8 @@ export function StampTab({
                   onClick={() => onGiftChange(false)}
                   className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
                     !isGift
-                      ? "border-black bg-black text-white"
-                      : "border-black bg-white"
+                      ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                      : "border-black bg-white hover:bg-black hover:text-white"
                   }`}>
                   For me
                 </button>
@@ -135,8 +152,8 @@ export function StampTab({
                   onClick={() => onGiftChange(true)}
                   className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
                     isGift
-                      ? "border-black bg-black text-white"
-                      : "border-black bg-white"
+                      ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                      : "border-black bg-white hover:bg-black hover:text-white"
                   }`}>
                   As a gift
                 </button>
@@ -144,7 +161,7 @@ export function StampTab({
               {isGift && (
                 <>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] tracking-[0.18em]">
+                    <label className="text-[11px] uppercase tracking-[0.18em]">
                       RECIPIENT ADDRESS
                     </label>
                     <input
@@ -166,7 +183,7 @@ export function StampTab({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
+                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-50">
                 {isSubmitting
                   ? "Stamping..."
                   : isGift

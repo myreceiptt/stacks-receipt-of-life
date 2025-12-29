@@ -6,6 +6,7 @@ type FeedItem = {
   sender: string;
   recipient?: string;
   timestamp?: string;
+  receiptId?: number | null;
 };
 
 type FeedTabProps = {
@@ -15,6 +16,9 @@ type FeedTabProps = {
   feedPage: number;
   totalFeedPages: number;
   onPageChange: (page: number) => void;
+  onReceiptSelect: (id: number) => void;
+  feedCooling: boolean;
+  cooldownMs: number;
 };
 
 export function FeedTab({
@@ -24,7 +28,23 @@ export function FeedTab({
   feedPage,
   totalFeedPages,
   onPageChange,
+  onReceiptSelect,
+  feedCooling,
+  cooldownMs,
 }: FeedTabProps) {
+  if (feedCooling) {
+    return (
+      <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+        <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+          Your Activity Feed
+        </p>
+        <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+          Cooling down for {Math.max(0, Math.ceil(cooldownMs))} milliseconds and
+          then loading on-chain data for feed...
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
       <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
@@ -53,7 +73,29 @@ export function FeedTab({
         <ul className="list-disc space-y-3 pl-4 text-sm text-neutral-800">
           {feedItems.map((item) => (
             <li key={item.txid} className="pl-1">
-              <div className="font-semibold">{item.label}</div>
+              <div className="font-semibold">
+                {item.receiptId != null ? (
+                  (() => {
+                    const token = `RECEIPT #${item.receiptId}`;
+                    if (!item.label.includes(token)) return item.label;
+                    const [before, after] = item.label.split(token);
+                    return (
+                      <>
+                        {before}
+                        <button
+                          type="button"
+                          onClick={() => onReceiptSelect(item.receiptId!)}
+                          className="uppercase underline">
+                          {token}
+                        </button>
+                        {after}
+                      </>
+                    );
+                  })()
+                ) : (
+                  item.label
+                )}
+              </div>
               {item.timestamp && (
                 <div className="mt-1 text-[11px] text-neutral-500">
                   {new Date(item.timestamp).toLocaleString("en-US", {
@@ -72,7 +114,9 @@ export function FeedTab({
                   target="_blank"
                   rel="noreferrer"
                   className="underline">
-                  <span className="font-mono">{item.txid}</span>
+                  <span className="font-mono">
+                    {item.txid.slice(0, 7)} ... {item.txid.slice(-7)}
+                  </span>
                 </a>{" "}
                 <span className="font-mono">(View on Explorer)</span>
               </div>
@@ -83,7 +127,9 @@ export function FeedTab({
                   target="_blank"
                   rel="noreferrer"
                   className="underline">
-                  <span className="font-mono">{item.sender}</span>
+                  <span className="font-mono">
+                    {item.sender.slice(0, 7)} ... {item.sender.slice(-4)}
+                  </span>
                 </a>{" "}
                 <span className="font-mono">(View on Explorer)</span>
               </div>
@@ -96,12 +142,15 @@ export function FeedTab({
                       target="_blank"
                       rel="noreferrer"
                       className="underline">
-                      <span className="font-mono">{item.recipient}</span>
+                      <span className="font-mono">
+                        {item.recipient.slice(0, 7)} ...{" "}
+                        {item.recipient.slice(-4)}
+                      </span>
                     </a>{" "}
                     <span className="font-mono">(View on Explorer)</span>
                   </>
                 ) : (
-                  <span className="font-mono">unknown</span>
+                  <span className="font-mono">no recipient</span>
                 )}
               </div>
             </li>
@@ -115,7 +164,7 @@ export function FeedTab({
             type="button"
             onClick={() => onPageChange(feedPage - 1)}
             disabled={feedPage === 1}
-            className="rounded-full border border-black bg-white px-3 py-1 uppercase tracking-[0.18em] disabled:opacity-40">
+            className="rounded-full border border-black bg-white px-3 py-1 uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
             Prev
           </button>
           {Array.from({ length: totalFeedPages }, (_, idx) => idx + 1)
@@ -135,8 +184,8 @@ export function FeedTab({
                     onClick={() => onPageChange(page)}
                     className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
                       page === feedPage
-                        ? "border-black bg-black text-white"
-                        : "border-black bg-white"
+                        ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                        : "border-black bg-white hover:bg-black hover:text-white"
                     }`}>
                     {page}
                   </button>
@@ -147,7 +196,7 @@ export function FeedTab({
             type="button"
             onClick={() => onPageChange(feedPage + 1)}
             disabled={totalFeedPages > 0 && feedPage >= totalFeedPages}
-            className="rounded-full border border-black bg-white px-3 py-1 uppercase tracking-[0.18em] disabled:opacity-40">
+            className="rounded-full border border-black bg-white px-3 py-1 uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
             Next
           </button>
         </div>

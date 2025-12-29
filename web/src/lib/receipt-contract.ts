@@ -917,7 +917,10 @@ export async function getActivityReceiptsPaged(
 
     return { items: sorted, nextHighestId };
   } catch (error) {
-    console.error("Failed to load activity receipts", error);
+    console.error(
+      "Failed to load receipt's activity. Please try again later.",
+      error
+    );
     return { items: [], nextHighestId: null };
   }
 }

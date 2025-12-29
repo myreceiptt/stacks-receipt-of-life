@@ -22,3 +22,9 @@ body {
   font-family: "Lucida Console", "Lucida Sans Typewriter", "Courier New",
     monospace;
 }
+
+button,
+a[href],
+[role="button"] {
+  cursor: pointer;
+}

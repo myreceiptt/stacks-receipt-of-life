@@ -3,10 +3,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { useWallet } from "@/hooks/use-wallet";
+import { usePathname } from "next/navigation";
 
 export function Navbar() {
   const { address } = useWallet();
   const isConnected = !!address;
+  const pathname = usePathname();
+  const isActive = (path: string) => pathname === path;
 
   return (
     <header className="border-b border-black bg-white">
@@ -32,20 +35,32 @@ export function Navbar() {
             <>
               <Link
                 href="/"
-                className="rounded-full border border-black bg-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
+                className={`rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] ${
+                  isActive("/")
+                    ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                    : "border-black bg-white hover:bg-black hover:text-white"
+                }`}>
                 Stamp
               </Link>
 
               <Link
                 href="/me"
-                className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white">
+                className={`rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] ${
+                  isActive("/me")
+                    ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                    : "border-black bg-white hover:bg-black hover:text-white"
+                }`}>
                 Receipts
               </Link>
 
               <Link
-                href="/admin"
-                className="rounded-full border border-black bg-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
-                Admin
+                href="/contract"
+                className={`rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] ${
+                  isActive("/contract")
+                    ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                    : "border-black bg-white hover:bg-black hover:text-white"
+                }`}>
+                Contract
               </Link>
             </>
           )}
