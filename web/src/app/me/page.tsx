@@ -10,6 +10,7 @@ import {
   getOwnedReceiptsPaged,
   getCreatedReceiptsPaged,
   getRoyaltyReceiptsPaged,
+  transferReceipt,
   type Receipt,
 } from "@/lib/receipt-contract";
 
@@ -37,6 +38,16 @@ export default function MePage() {
   const [activeTab, setActiveTab] = useState<"owned" | "created" | "royalty">(
     "owned"
   );
+  const [transferInputs, setTransferInputs] = useState<Record<number, string>>(
+    {}
+  );
+  const [transferErrors, setTransferErrors] = useState<Record<number, string>>(
+    {}
+  );
+  const [transferSuccess, setTransferSuccess] = useState<Record<number, string>>(
+    {}
+  );
+  const [transferring, setTransferring] = useState<Record<number, boolean>>({});
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const hasOwned = ownedReceipts.length > 0;
   const hasTotal = typeof totalOnChain === "number" && totalOnChain > 0;
@@ -168,6 +179,49 @@ export default function MePage() {
     return ok;
   }, [activeAddress]);
 
+  const validateStacksAddress = (addr: string) => {
+    const trimmed = addr.trim();
+    return trimmed.length >= 30 && trimmed.startsWith("S");
+  };
+
+  const handleTransfer = async (receipt: Receipt) => {
+    if (!activeAddress || receipt.owner !== activeAddress) return;
+    const input = transferInputs[receipt.id] ?? "";
+    if (!validateStacksAddress(input)) {
+      setTransferErrors((prev) => ({
+        ...prev,
+        [receipt.id]:
+          "Enter a valid Stacks address (starts with 'S' and looks complete).",
+      }));
+      return;
+    }
+    setTransferErrors((prev) => ({ ...prev, [receipt.id]: "" }));
+    setTransferSuccess((prev) => ({ ...prev, [receipt.id]: "" }));
+    setTransferring((prev) => ({ ...prev, [receipt.id]: true }));
+    try {
+      await transferReceipt(receipt.id, input.trim());
+      setTransferInputs((prev) => ({ ...prev, [receipt.id]: "" }));
+      setTransferSuccess((prev) => ({
+        ...prev,
+        [receipt.id]:
+          "Transfer submitted. Once confirmed on-chain, this receipt will move to the new owner.",
+      }));
+      runWithCooldown(async () => {
+        const ok = await loadOwnedInitial();
+        if (ok) markSuccess();
+      });
+    } catch (err) {
+      console.error("Transfer failed", err);
+      setTransferErrors((prev) => ({
+        ...prev,
+        [receipt.id]:
+          "Transfer failed. Please check that you are the current owner, the recipient address is correct, and you have enough STX for the royalty fee.",
+      }));
+    } finally {
+      setTransferring((prev) => ({ ...prev, [receipt.id]: false }));
+    }
+  };
+
   useEffect(() => {
     if (!activeAddress) return;
     runWithCooldown(async () => {
@@ -225,6 +279,10 @@ export default function MePage() {
       setRoyaltyLoading(false);
       setTotalOnChain(null);
       setError(null);
+      setTransferInputs({});
+      setTransferErrors({});
+      setTransferSuccess({});
+      setTransferring({});
     }
   }, [activeAddress]);
 
@@ -473,6 +531,44 @@ export default function MePage() {
                                 </span>
                               )}
                           </div>
+                          {activeAddress === r.owner && (
+                            <div className="mt-3 space-y-2">
+                              <label className="text-[11px] uppercase tracking-[0.18em] text-neutral-700">
+                                Transfer to new owner
+                              </label>
+                              <input
+                                type="text"
+                                value={transferInputs[r.id] ?? ""}
+                                onChange={(e) =>
+                                  setTransferInputs((prev) => ({
+                                    ...prev,
+                                    [r.id]: e.target.value,
+                                  }))
+                                }
+                                placeholder="S..."
+                                className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                              />
+                              {transferErrors[r.id] && (
+                                <p className="text-[11px] text-red-700">
+                                  {transferErrors[r.id]}
+                                </p>
+                              )}
+                              {transferSuccess[r.id] && (
+                                <p className="text-[11px] text-green-700">
+                                  {transferSuccess[r.id]}
+                                </p>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleTransfer(r)}
+                                disabled={!!transferring[r.id]}
+                                className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                                {transferring[r.id]
+                                  ? "Transferring…"
+                                  : "Confirm transfer"}
+                              </button>
+                            </div>
+                          )}
                         </li>
                       );
                     })}

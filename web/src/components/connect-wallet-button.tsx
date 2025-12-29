@@ -1,7 +1,11 @@
 "use client";
 
 import { useWallet } from "@/hooks/use-wallet";
-import { useAppKit, useAppKitAccount, useDisconnect } from "@reown/appkit/react";
+import {
+  useAppKit,
+  useAppKitAccount,
+  useDisconnect,
+} from "@reown/appkit/react";
 import { useEffect, useState } from "react";
 
 export function ConnectWalletButton() {
@@ -59,27 +63,23 @@ export function ConnectWalletButton() {
     <>
       <button
         onClick={() => setModalOpen(true)}
-        className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-60"
-      >
+        className="rounded-full border border-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-60">
         {isConnecting ? "Connect Wallet" : short}
       </button>
       {isModalOpen ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.50)] backdrop-blur-sm px-4"
-          onClick={() => setModalOpen(false)}
-        >
+          onClick={() => setModalOpen(false)}>
           <div
             className="w-full max-w-sm rounded-2xl border border-black bg-white p-5 shadow-[6px_6px_0_0_#000]"
-            onClick={(event) => event.stopPropagation()}
-          >
+            onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-[0.18em]">
                 Connect wallet
               </h2>
               <button
                 onClick={() => setModalOpen(false)}
-                className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline"
-              >
+                className="rounded-full border border-black px-3 py-1 text-xs uppercase tracking-[0.18em] hover:bg-black hover:text-white">
                 Close
               </button>
             </div>
@@ -92,19 +92,15 @@ export function ConnectWalletButton() {
                     setModalOpen(false);
                   }}
                   disabled={isConnecting}
-                  className="w-full rounded-xl border border-black px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-60"
-                >
-                  {isConnecting
-                    ? "Connecting…"
-                    : "Connect Stacks wallet"}
+                  className="w-full rounded-xl border border-black bg-black px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black disabled:opacity-60">
+                  {isConnecting ? "Connecting…" : "Connect Stacks wallet"}
                 </button>
                 <button
                   onClick={() => {
                     setModalOpen(false);
                     void open();
                   }}
-                  className="w-full rounded-xl border border-black bg-black px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black"
-                >
+                  className="w-full rounded-xl border border-black bg-black px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
                   WalletConnect QR Code
                 </button>
               </div>
@@ -114,12 +110,11 @@ export function ConnectWalletButton() {
               <div className="mt-4 rounded-xl border border-black/20 bg-white px-3 py-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="uppercase tracking-[0.18em]">
-                    Installed wallet
+                    Connected Wallet
                   </span>
                   <button
                     onClick={() => disconnect()}
-                    className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline"
-                  >
+                    className="rounded-full border border-black bg-black px-3 py-1 text-xs uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
                     Disconnect
                   </button>
                 </div>
@@ -131,12 +126,11 @@ export function ConnectWalletButton() {
               <div className="mt-3 rounded-xl border border-black/20 bg-white px-3 py-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="uppercase tracking-[0.18em]">
-                    WalletConnect
+                    Connected Wallet
                   </span>
                   <button
                     onClick={() => disconnectWc({ namespace: "stacks" })}
-                    className="text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline"
-                  >
+                    className="rounded-full border border-black px-3 py-1 text-xs uppercase tracking-[0.18em] hover:bg-black hover:text-white">
                     Disconnect
                   </button>
                 </div>
