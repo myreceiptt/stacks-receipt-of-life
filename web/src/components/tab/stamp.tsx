@@ -30,6 +30,8 @@ type StampTabProps = {
   dataError: string | null;
   config: ContractConfig | null;
   stats: ContractStats | null;
+  cooling: boolean;
+  cooldownMs: number;
   isOverLimit: boolean;
   remaining: number;
   isGift: boolean;
@@ -52,6 +54,8 @@ export function StampTab({
   dataError,
   config,
   stats,
+  cooling,
+  cooldownMs,
   isOverLimit,
   remaining,
   isGift,
@@ -68,6 +72,19 @@ export function StampTab({
   onGiftChange,
   onRecipientChange,
 }: StampTabProps) {
+  if (cooling) {
+    return (
+      <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+        <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+          Stamp a Receipt
+        </p>
+        <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+          Cooling down for {Math.max(0, Math.ceil(cooldownMs))} milliseconds and
+          when done will loading on-chain data...
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
       <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">

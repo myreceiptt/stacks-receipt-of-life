@@ -43,9 +43,9 @@ export function Navbar() {
               </Link>
 
               <Link
-                href="/admin"
+                href="/contract"
                 className="rounded-full border border-black bg-black px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white hover:bg-white hover:text-black">
-                Admin
+                Contract
               </Link>
             </>
           )}

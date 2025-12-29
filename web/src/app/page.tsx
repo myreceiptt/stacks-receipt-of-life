@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@/hooks/use-wallet";
+import { useCooldown } from "@/hooks/use-cooldown";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { cvToJSON, hexToCV } from "@stacks/transactions";
 import { FeedTab } from "@/components/tab/feed";
@@ -19,6 +20,9 @@ export default function HomePage() {
   const { address } = useWallet();
   const { address: wcAddress } = useAppKitAccount({ namespace: "stacks" });
   const activeAddress = address ?? wcAddress ?? null;
+  const { isCooling, remainingMs, markSuccess, startCooldownIfNeeded } =
+    useCooldown();
+  const pendingActionRef = useRef<null | (() => Promise<void>)>(null);
   const [text, setText] = useState("");
   const [isGift, setIsGift] = useState(false);
   const [recipientAddress, setRecipientAddress] = useState("");
@@ -69,6 +73,25 @@ export default function HomePage() {
   const isOverLimit = remaining < 0;
   const feedPageSize = 11;
   const feedApiPageSize = 50;
+
+  useEffect(() => {
+    if (!isCooling && pendingActionRef.current) {
+      const action = pendingActionRef.current;
+      pendingActionRef.current = null;
+      action();
+    }
+  }, [isCooling]);
+
+  const runWithCooldown = useCallback(
+    (action: () => Promise<void>) => {
+      if (startCooldownIfNeeded()) {
+        pendingActionRef.current = action;
+        return;
+      }
+      action();
+    },
+    [startCooldownIfNeeded]
+  );
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -327,7 +350,7 @@ export default function HomePage() {
     [feedApiPageSize, feedPageSize]
   );
 
-  const handleRefresh = useCallback(async () => {
+  const performRefresh = useCallback(async () => {
     if (!activeAddress) return;
     setLoadingData(true);
     setIsRefreshing(true);
@@ -337,12 +360,16 @@ export default function HomePage() {
     setTxId(null);
     setFeedLoading(true);
     setFeedError(null);
+    let configOk = false;
+    let feedOk = false;
     try {
       const [cfg, st] = await Promise.all([getConfig(), getStats()]);
       if (cfg) setConfigState(cfg);
       if (st) setStatsState(st);
       if (!cfg || !st) {
         setDataError("Unable to fetch on-chain data. Please try again.");
+      } else {
+        configOk = true;
       }
     } catch (err) {
       console.error(err);
@@ -356,6 +383,7 @@ export default function HomePage() {
       setFeedItems(items);
       setFeedTotal(total);
       setFeedPage(1);
+      feedOk = true;
     } catch (err) {
       console.error(err);
       setFeedError(
@@ -363,33 +391,53 @@ export default function HomePage() {
       );
     }
 
+    if (configOk && feedOk) {
+      markSuccess();
+    }
     setLoadingData(false);
     setFeedLoading(false);
     setIsRefreshing(false);
-  }, [activeAddress, fetchFeed]);
+  }, [activeAddress, fetchFeed, markSuccess]);
+
+  const handleRefresh = useCallback(() => {
+    runWithCooldown(performRefresh);
+  }, [performRefresh, runWithCooldown]);
 
   const totalFeedPages =
     feedTotal > 0 ? Math.ceil(feedTotal / feedPageSize) : 0;
 
-  const handleFeedPageChange = async (nextPage: number) => {
-    if (!activeAddress || feedLoading) return;
-    if (nextPage < 1 || (totalFeedPages > 0 && nextPage > totalFeedPages)) {
-      return;
-    }
-    setFeedLoading(true);
-    setFeedError(null);
-    try {
-      const { items, total } = await fetchFeed(activeAddress, nextPage);
-      setFeedItems(items);
-      setFeedTotal(total);
-      setFeedPage(nextPage);
-    } catch (err) {
-      console.error(err);
-      setFeedError("Unable to load feed items.");
-    } finally {
-      setFeedLoading(false);
-    }
-  };
+  const handleFeedPageChange = useCallback(
+    (nextPage: number) => {
+      if (!activeAddress || feedLoading) return;
+      if (nextPage < 1 || (totalFeedPages > 0 && nextPage > totalFeedPages)) {
+        return;
+      }
+      runWithCooldown(async () => {
+        setFeedLoading(true);
+        setFeedError(null);
+        try {
+          const { items, total } = await fetchFeed(activeAddress, nextPage);
+          setFeedItems(items);
+          setFeedTotal(total);
+          setFeedPage(nextPage);
+          markSuccess();
+        } catch (err) {
+          console.error(err);
+          setFeedError("Unable to load feed items.");
+        } finally {
+          setFeedLoading(false);
+        }
+      });
+    },
+    [
+      activeAddress,
+      feedLoading,
+      fetchFeed,
+      markSuccess,
+      runWithCooldown,
+      totalFeedPages,
+    ]
+  );
 
   useEffect(() => {
     if (!activeAddress) return;
@@ -418,7 +466,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={!activeAddress || loadingData}
+              disabled={!activeAddress || loadingData || isCooling}
               className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40">
               {isRefreshing || loadingData ? "Refreshing…" : "Refresh"}
             </button>
@@ -477,6 +525,8 @@ export default function HomePage() {
               dataError={dataError}
               config={config}
               stats={stats}
+              cooling={isCooling}
+              cooldownMs={remainingMs}
               isOverLimit={isOverLimit}
               remaining={remaining}
               isGift={isGift}
@@ -503,6 +553,8 @@ export default function HomePage() {
               feedPage={feedPage}
               totalFeedPages={totalFeedPages}
               onPageChange={handleFeedPageChange}
+              feedCooling={isCooling}
+              cooldownMs={remainingMs}
             />
           )}
         </div>

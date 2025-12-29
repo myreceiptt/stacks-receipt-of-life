@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@/hooks/use-wallet";
+import { useCooldown } from "@/hooks/use-cooldown";
 import { useAppKitAccount } from "@reown/appkit/react";
 import {
   getLastId,
@@ -17,6 +18,9 @@ export default function MePage() {
   const { address } = useWallet();
   const { address: wcAddress } = useAppKitAccount({ namespace: "stacks" });
   const activeAddress = address ?? wcAddress ?? null;
+  const { isCooling, remainingMs, markSuccess, startCooldownIfNeeded } =
+    useCooldown();
+  const pendingActionRef = useRef<null | (() => Promise<void>)>(null);
   const [ownedReceipts, setOwnedReceipts] = useState<Receipt[]>([]);
   const [ownedWindowStart, setOwnedWindowStart] = useState<number | null>(null);
   const [ownedHasMore, setOwnedHasMore] = useState(false);
@@ -69,8 +73,6 @@ export default function MePage() {
   const hasTotal = typeof totalOnChain === "number" && totalOnChain > 0;
   const hasRoyalty = royaltyReceipts.length > 0;
   const isLoading = ownedLoading || createdLoading || royaltyLoading;
-  const isRefreshing =
-    ownedLoadingMore || createdLoadingMore || royaltyLoadingMore;
   const activeLoading =
     activeTab === "owned"
       ? ownedLoading
@@ -84,6 +86,25 @@ export default function MePage() {
       ? createdLoadingMore
       : royaltyLoadingMore;
   const ownedPageSize = 10;
+
+  useEffect(() => {
+    if (!isCooling && pendingActionRef.current) {
+      const action = pendingActionRef.current;
+      pendingActionRef.current = null;
+      action();
+    }
+  }, [isCooling]);
+
+  const runWithCooldown = useCallback(
+    (action: () => Promise<void>) => {
+      if (startCooldownIfNeeded()) {
+        pendingActionRef.current = action;
+        return;
+      }
+      action();
+    },
+    [startCooldownIfNeeded]
+  );
 
   const fetchOwnedWindow = useCallback(
     async (start: number) => {
@@ -112,9 +133,10 @@ export default function MePage() {
   );
 
   const loadOwnedInitial = useCallback(async () => {
-    if (!activeAddress) return;
+    if (!activeAddress) return false;
     setOwnedLoading(true);
     setError(null);
+    let ok = false;
     try {
       const total = await getLastId();
       if (total === 0) {
@@ -122,7 +144,8 @@ export default function MePage() {
         setOwnedReceipts([]);
         setOwnedWindowStart(null);
         setOwnedHasMore(false);
-        return;
+        ok = true;
+        return ok;
       }
       const initialStart = Math.max(1, total - (ownedPageSize - 1));
       const { items, startUsed } = await fetchOwnedWindow(initialStart);
@@ -130,18 +153,21 @@ export default function MePage() {
       setOwnedReceipts(items);
       setOwnedWindowStart(startUsed);
       setOwnedHasMore(startUsed > 1);
+      ok = true;
     } catch (err) {
       console.error(err);
       setError("Failed to load receipts from Stacks mainnet.");
     } finally {
       setOwnedLoading(false);
     }
+    return ok;
   }, [activeAddress, ownedPageSize, fetchOwnedWindow]);
 
   const loadCreatedInitial = useCallback(async () => {
-    if (!activeAddress) return;
+    if (!activeAddress) return false;
     setCreatedLoading(true);
     setCreatedError(null);
+    let ok = false;
     try {
       const total = await getLastId();
       const { items, nextStartId } = await getCreatedReceiptsPaged(
@@ -152,18 +178,21 @@ export default function MePage() {
       setTotalOnChain(total);
       setCreatedReceipts(items);
       setCreatedNextStart(nextStartId);
+      ok = true;
     } catch (err) {
       console.error(err);
       setCreatedError("Failed to load created receipts from Stacks mainnet.");
     } finally {
       setCreatedLoading(false);
     }
+    return ok;
   }, [activeAddress]);
 
   const loadRoyaltyInitial = useCallback(async () => {
-    if (!activeAddress) return;
+    if (!activeAddress) return false;
     setRoyaltyLoading(true);
     setRoyaltyError(null);
+    let ok = false;
     try {
       const { items, nextStartId } = await getRoyaltyReceiptsPaged(
         activeAddress,
@@ -172,18 +201,23 @@ export default function MePage() {
       );
       setRoyaltyReceipts(items);
       setRoyaltyNextStart(nextStartId);
+      ok = true;
     } catch (err) {
       console.error(err);
       setRoyaltyError("Failed to load royalty receipts from Stacks mainnet.");
     } finally {
       setRoyaltyLoading(false);
     }
+    return ok;
   }, [activeAddress]);
 
   useEffect(() => {
     if (!activeAddress) return;
-    loadOwnedInitial();
-  }, [activeAddress, loadOwnedInitial]);
+    runWithCooldown(async () => {
+      const ok = await loadOwnedInitial();
+      if (ok) markSuccess();
+    });
+  }, [activeAddress, loadOwnedInitial, markSuccess, runWithCooldown]);
 
   useEffect(() => {
     if (!activeAddress) return;
@@ -192,14 +226,20 @@ export default function MePage() {
       createdReceipts.length === 0 &&
       !createdLoading
     ) {
-      loadCreatedInitial();
+      runWithCooldown(async () => {
+        const ok = await loadCreatedInitial();
+        if (ok) markSuccess();
+      });
     }
     if (
       activeTab === "royalty" &&
       royaltyReceipts.length === 0 &&
       !royaltyLoading
     ) {
-      loadRoyaltyInitial();
+      runWithCooldown(async () => {
+        const ok = await loadRoyaltyInitial();
+        if (ok) markSuccess();
+      });
     }
   }, [
     activeTab,
@@ -207,6 +247,8 @@ export default function MePage() {
     createdReceipts.length,
     createdLoading,
     loadCreatedInitial,
+    markSuccess,
+    runWithCooldown,
     royaltyReceipts.length,
     royaltyLoading,
     loadRoyaltyInitial,
@@ -238,23 +280,32 @@ export default function MePage() {
   const handleRefresh = async () => {
     if (!activeAddress) return;
     if (activeTab === "owned") {
-      setError(null);
-      setOwnedLoading(true);
-      await loadOwnedInitial();
-      setOwnedLoading(false);
+      runWithCooldown(async () => {
+        setError(null);
+        setOwnedLoading(true);
+        const ok = await loadOwnedInitial();
+        if (ok) markSuccess();
+        setOwnedLoading(false);
+      });
       return;
     }
     if (activeTab === "created") {
-      setCreatedError(null);
-      setCreatedLoading(true);
-      await loadCreatedInitial();
-      setCreatedLoading(false);
+      runWithCooldown(async () => {
+        setCreatedError(null);
+        setCreatedLoading(true);
+        const ok = await loadCreatedInitial();
+        if (ok) markSuccess();
+        setCreatedLoading(false);
+      });
       return;
     }
-    setRoyaltyError(null);
-    setRoyaltyLoading(true);
-    await loadRoyaltyInitial();
-    setRoyaltyLoading(false);
+    runWithCooldown(async () => {
+      setRoyaltyError(null);
+      setRoyaltyLoading(true);
+      const ok = await loadRoyaltyInitial();
+      if (ok) markSuccess();
+      setRoyaltyLoading(false);
+    });
   };
 
   const validateStacksAddress = (addr: string) => {
@@ -334,58 +385,67 @@ export default function MePage() {
 
   const handleLoadMoreOwned = async () => {
     if (!activeAddress || !ownedWindowStart || !ownedHasMore) return;
-    setOwnedLoadingMore(true);
-    try {
-      const nextStart = Math.max(1, ownedWindowStart - ownedPageSize);
-      const { items, startUsed } = await fetchOwnedWindow(nextStart);
-      setOwnedReceipts((prev) => [...prev, ...items]);
-      setOwnedWindowStart(startUsed);
-      setOwnedHasMore(startUsed > 1);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to load more owned receipts.");
-    } finally {
-      setOwnedLoadingMore(false);
-    }
+    runWithCooldown(async () => {
+      setOwnedLoadingMore(true);
+      try {
+        const nextStart = Math.max(1, ownedWindowStart - ownedPageSize);
+        const { items, startUsed } = await fetchOwnedWindow(nextStart);
+        setOwnedReceipts((prev) => [...prev, ...items]);
+        setOwnedWindowStart(startUsed);
+        setOwnedHasMore(startUsed > 1);
+        markSuccess();
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load more owned receipts.");
+      } finally {
+        setOwnedLoadingMore(false);
+      }
+    });
   };
 
   const handleLoadMoreCreated = async () => {
     if (!activeAddress || createdNextStart === null) return;
-    setCreatedLoadingMore(true);
-    setCreatedError(null);
-    try {
-      const { items, nextStartId } = await getCreatedReceiptsPaged(
-        activeAddress,
-        createdNextStart,
-        10
-      );
-      setCreatedReceipts((prev) => [...prev, ...items]);
-      setCreatedNextStart(nextStartId);
-    } catch (err) {
-      console.error(err);
-      setCreatedError("Failed to load more created receipts.");
-    } finally {
-      setCreatedLoadingMore(false);
-    }
+    runWithCooldown(async () => {
+      setCreatedLoadingMore(true);
+      setCreatedError(null);
+      try {
+        const { items, nextStartId } = await getCreatedReceiptsPaged(
+          activeAddress,
+          createdNextStart,
+          10
+        );
+        setCreatedReceipts((prev) => [...prev, ...items]);
+        setCreatedNextStart(nextStartId);
+        markSuccess();
+      } catch (err) {
+        console.error(err);
+        setCreatedError("Failed to load more created receipts.");
+      } finally {
+        setCreatedLoadingMore(false);
+      }
+    });
   };
 
   const handleLoadMoreRoyalty = async () => {
     if (!activeAddress || royaltyNextStart === null) return;
-    setRoyaltyLoadingMore(true);
-    try {
-      const { items, nextStartId } = await getRoyaltyReceiptsPaged(
-        activeAddress,
-        royaltyNextStart,
-        10
-      );
-      setRoyaltyReceipts((prev) => [...prev, ...items]);
-      setRoyaltyNextStart(nextStartId);
-    } catch (err) {
-      console.error(err);
-      setRoyaltyError("Failed to load more royalty receipts.");
-    } finally {
-      setRoyaltyLoadingMore(false);
-    }
+    runWithCooldown(async () => {
+      setRoyaltyLoadingMore(true);
+      try {
+        const { items, nextStartId } = await getRoyaltyReceiptsPaged(
+          activeAddress,
+          royaltyNextStart,
+          10
+        );
+        setRoyaltyReceipts((prev) => [...prev, ...items]);
+        setRoyaltyNextStart(nextStartId);
+        markSuccess();
+      } catch (err) {
+        console.error(err);
+        setRoyaltyError("Failed to load more royalty receipts.");
+      } finally {
+        setRoyaltyLoadingMore(false);
+      }
+    });
   };
 
   return (
@@ -417,7 +477,7 @@ export default function MePage() {
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={!activeAddress || activeLoading}
+              disabled={!activeAddress || activeLoading || isCooling}
               className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40">
               {activeRefreshing || activeLoading ? "Refreshing…" : "Refresh"}
             </button>
@@ -480,209 +540,216 @@ export default function MePage() {
             </button>
           </div>
 
-          <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
-            <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
-              Your Owned Receipts
-            </p>
+          {isCooling ? (
+            <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+              Cooling down for {Math.max(0, Math.ceil(remainingMs))} milliseconds
+              and when done will loading on-chain data...
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
+                <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
+                  Your Owned Receipts
+                </p>
 
-            {activeLoading && (
-              <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-                Loading on-chain receipts...
+                {activeLoading && (
+                  <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+                    Loading on-chain receipts...
+                  </div>
+                )}
+
+                {!isLoading &&
+                  !error &&
+                  activeTab === "owned" &&
+                  !hasOwned &&
+                  hasTotal && (
+                    <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+                      There are{" "}
+                      <span className="font-mono">
+                        {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
+                      </span>{" "}
+                      on this contract, but none are owned by this wallet yet.
+                      Stamp your first receipt on the home page.
+                    </div>
+                  )}
               </div>
-            )}
 
-            {!isLoading &&
-              !error &&
-              activeTab === "owned" &&
-              !hasOwned &&
-              hasTotal && (
-                <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-                  There are{" "}
-                  <span className="font-mono">
-                    {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
-                  </span>{" "}
-                  on this contract, but none are owned by this wallet yet. Stamp
-                  your first receipt on the home page.
+              {error && activeTab === "owned" && (
+                <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {error}
                 </div>
               )}
-          </div>
-
-          {error && activeTab === "owned" && (
-            <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {error}
-            </div>
-          )}
-          {createdError && activeTab === "created" && (
-            <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {createdError}
-            </div>
-          )}
-          {royaltyError && activeTab === "royalty" && (
-            <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {royaltyError}
-            </div>
-          )}
-
-          {!isLoading &&
-            !createdError &&
-            activeTab === "created" &&
-            !hasCreated &&
-            hasTotal && (
-              <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
-                There are{" "}
-                <span className="font-mono">
-                  {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
-                </span>{" "}
-                on this contract, but none were created by this wallet yet.
-                Stamp your first receipt on the home page.
-              </div>
-            )}
-
-          {!isLoading && !error && !createdError && !hasTotal && (
-            <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
-              No receipts exist on this contract yet. Be the first one to stamp
-              a Receipt of Life on the home page.
-            </div>
-          )}
-
-          {activeTab === "royalty" && !royaltyError && (
-            <p className="text-xs text-neutral-700">
-              Receipts where you are the current royalty recipient.
-            </p>
-          )}
-
-          {!isLoading &&
-            !royaltyError &&
-            activeTab === "royalty" &&
-            !hasRoyalty &&
-            hasTotal && (
-              <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
-                No receipts are currently sending royalties to this address.
-              </div>
-            )}
-
-          {!isLoading && !error && activeTab === "owned" && hasOwned && (
-            <ul className="space-y-3">
-              {ownedReceipts.map((r) => {
-                const date = new Date(r.createdAt * 1000);
-                return (
-                  <li
-                    key={r.id}
-                    className="rounded-xl border border-black bg-white p-4 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">
-                        Receipt #{r.id}
-                      </span>
-                      <span className="text-[11px] text-neutral-500">
-                        {date.toLocaleString()}
-                      </span>
-                    </div>
-                    <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
-                      {r.text}
-                    </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
-                      <span className="font-mono wrap-break-word">
-                        Creator: {r.creator.slice(0, 8)}…{r.creator.slice(-4)}
-                      </span>
-                      <a
-                        href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline">
-                        View creator
-                      </a>
-                      <span className="font-mono wrap-break-word">
-                        Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
-                      </span>
-                      <a
-                        href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline">
-                        View owner
-                      </a>
-                      <span className="font-mono wrap-break-word">
-                        Royalty to: {r.royaltyRecipient.slice(0, 8)}…
-                        {r.royaltyRecipient.slice(-4)}
-                      </span>
-                      <a
-                        href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline">
-                        View royalty
-                      </a>
-                      {activeAddress &&
-                        (r.creator === activeAddress ||
-                          r.owner === activeAddress ||
-                          r.royaltyRecipient === activeAddress) && (
-                          <span className="rounded-full border border-black px-2 py-1">
-                            You are involved
-                          </span>
-                        )}
-                    </div>
-                    {activeAddress === r.owner && activeTab === "owned" && (
-                      <div className="mt-4 space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-700">
-                          Actions · Transfer
-                        </p>
-                        <input
-                          type="text"
-                          value={transferInputs[r.id] ?? ""}
-                          onChange={(e) =>
-                            setTransferInputs((prev) => ({
-                              ...prev,
-                              [r.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="S…"
-                          className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
-                        />
-                        {transferErrors[r.id] && (
-                          <p className="text-[11px] text-red-700">
-                            {transferErrors[r.id]}
-                          </p>
-                        )}
-                        {transferSuccess[r.id] && (
-                          <p className="text-[11px] text-green-700">
-                            {transferSuccess[r.id]}
-                          </p>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleTransfer(r)}
-                          disabled={!!transferring[r.id]}
-                          className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
-                          {transferring[r.id]
-                            ? "Transferring…"
-                            : "Confirm transfer"}
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-              {ownedHasMore ? (
-                <li>
-                  <button
-                    type="button"
-                    onClick={handleLoadMoreOwned}
-                    disabled={ownedLoadingMore}
-                    className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
-                    {ownedLoadingMore ? "Loading…" : "Load more"}
-                  </button>
-                </li>
-              ) : (
-                <li className="text-[11px]">
-                  <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
-                    Owned · {ownedReceipts.length} receipt
-                    {ownedReceipts.length > 1 ? "s" : ""}
-                  </span>
-                </li>
+              {createdError && activeTab === "created" && (
+                <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {createdError}
+                </div>
               )}
-            </ul>
-          )}
+              {royaltyError && activeTab === "royalty" && (
+                <div className="rounded-md border border-red-500 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {royaltyError}
+                </div>
+              )}
 
+              {!isLoading &&
+                !createdError &&
+                activeTab === "created" &&
+                !hasCreated &&
+                hasTotal && (
+                  <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
+                    There are{" "}
+                    <span className="font-mono">
+                      {totalOnChain} receipt{totalOnChain === 1 ? "" : "s"}
+                    </span>{" "}
+                    on this contract, but none were created by this wallet yet.
+                    Stamp your first receipt on the home page.
+                  </div>
+                )}
+
+              {!isLoading && !error && !createdError && !hasTotal && (
+                <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
+                  No receipts exist on this contract yet. Be the first one to
+                  stamp a Receipt of Life on the home page.
+                </div>
+              )}
+
+              {activeTab === "royalty" && !royaltyError && (
+                <p className="text-xs text-neutral-700">
+                  Receipts where you are the current royalty recipient.
+                </p>
+              )}
+
+              {!isLoading &&
+                !royaltyError &&
+                activeTab === "royalty" &&
+                !hasRoyalty &&
+                hasTotal && (
+                  <div className="rounded-md border border-black bg-neutral-50 px-3 py-2 text-xs">
+                    No receipts are currently sending royalties to this address.
+                  </div>
+                )}
+
+              {!isLoading && !error && activeTab === "owned" && hasOwned && (
+                <ul className="space-y-3">
+                  {ownedReceipts.map((r) => {
+                    const date = new Date(r.createdAt * 1000);
+                    return (
+                      <li
+                        key={r.id}
+                        className="rounded-xl border border-black bg-white p-4 text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-600">
+                            Receipt #{r.id}
+                          </span>
+                          <span className="text-[11px] text-neutral-500">
+                            {date.toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap wrap-break-word text-neutral-900">
+                          {r.text}
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-neutral-600">
+                          <span className="font-mono wrap-break-word">
+                            Creator: {r.creator.slice(0, 8)}…
+                            {r.creator.slice(-4)}
+                          </span>
+                          <a
+                            href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline">
+                            View creator
+                          </a>
+                          <span className="font-mono wrap-break-word">
+                            Owner: {r.owner.slice(0, 8)}…{r.owner.slice(-4)}
+                          </span>
+                          <a
+                            href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline">
+                            View owner
+                          </a>
+                          <span className="font-mono wrap-break-word">
+                            Royalty to: {r.royaltyRecipient.slice(0, 8)}…
+                            {r.royaltyRecipient.slice(-4)}
+                          </span>
+                          <a
+                            href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline">
+                            View royalty
+                          </a>
+                          {activeAddress &&
+                            (r.creator === activeAddress ||
+                              r.owner === activeAddress ||
+                              r.royaltyRecipient === activeAddress) && (
+                              <span className="rounded-full border border-black px-2 py-1">
+                                You are involved
+                              </span>
+                            )}
+                        </div>
+                        {activeAddress === r.owner && activeTab === "owned" && (
+                          <div className="mt-4 space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-700">
+                              Actions · Transfer
+                            </p>
+                            <input
+                              type="text"
+                              value={transferInputs[r.id] ?? ""}
+                              onChange={(e) =>
+                                setTransferInputs((prev) => ({
+                                  ...prev,
+                                  [r.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="S…"
+                              className="w-full border border-black px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black"
+                            />
+                            {transferErrors[r.id] && (
+                              <p className="text-[11px] text-red-700">
+                                {transferErrors[r.id]}
+                              </p>
+                            )}
+                            {transferSuccess[r.id] && (
+                              <p className="text-[11px] text-green-700">
+                                {transferSuccess[r.id]}
+                              </p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleTransfer(r)}
+                              disabled={!!transferring[r.id]}
+                              className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                              {transferring[r.id]
+                                ? "Transferring…"
+                                : "Confirm transfer"}
+                            </button>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                  {ownedHasMore ? (
+                    <li>
+                      <button
+                        type="button"
+                        onClick={handleLoadMoreOwned}
+                        disabled={ownedLoadingMore}
+                        className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                        {ownedLoadingMore ? "Loading…" : "Load more"}
+                      </button>
+                    </li>
+                  ) : (
+                    <li className="text-[11px]">
+                      <span className="rounded-full border border-black bg-neutral-50 px-2 py-1">
+                        Owned · {ownedReceipts.length} receipt
+                        {ownedReceipts.length > 1 ? "s" : ""}
+                      </span>
+                    </li>
+                  )}
+                </ul>
+              )}
           {!isLoading &&
             !createdError &&
             activeTab === "created" &&
@@ -877,20 +944,21 @@ export default function MePage() {
                     </li>
                   );
                 })}
-                {royaltyNextStart !== null && (
-                  <li>
-                    <button
+              {royaltyNextStart !== null && (
+                <li>
+                  <button
                       type="button"
                       onClick={handleLoadMoreRoyalty}
                       disabled={royaltyLoadingMore}
                       className="rounded-full border border-black px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
                       {royaltyLoadingMore ? "Loading…" : "Load more"}
-                    </button>
-                  </li>
-                )}
-              </ul>
-            )}
-
+                  </button>
+                </li>
+              )}
+            </ul>
+          )}
+            </>
+          )}
         </div>
       )}
     </section>

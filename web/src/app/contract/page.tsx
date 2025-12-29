@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@/hooks/use-wallet";
+import { useCooldown } from "@/hooks/use-cooldown";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { ContractTab } from "@/components/tab/contract";
 import { StatusTab } from "@/components/tab/status";
@@ -28,10 +29,13 @@ const contractId =
     ? `${contractAddressEnv}.${contractName}`
     : contractName;
 
-export default function AdminPage() {
+export default function ContractPage() {
   const { address } = useWallet();
   const { address: wcAddress } = useAppKitAccount({ namespace: "stacks" });
   const activeAddress = address ?? wcAddress ?? null;
+  const { isCooling, remainingMs, markSuccess, startCooldownIfNeeded } =
+    useCooldown();
+  const pendingActionRef = useRef<null | (() => Promise<void>)>(null);
 
   const envAdmin = process.env.NEXT_PUBLIC_RECEIPT_ADMIN_ADDRESS ?? "";
   const envStampFee = Number(
@@ -86,7 +90,26 @@ export default function AdminPage() {
     "contract"
   );
 
-  const handleRefresh = useCallback(async () => {
+  useEffect(() => {
+    if (!isCooling && pendingActionRef.current) {
+      const action = pendingActionRef.current;
+      pendingActionRef.current = null;
+      action();
+    }
+  }, [isCooling]);
+
+  const runWithCooldown = useCallback(
+    (action: () => Promise<void>) => {
+      if (startCooldownIfNeeded()) {
+        pendingActionRef.current = action;
+        return;
+      }
+      action();
+    },
+    [startCooldownIfNeeded]
+  );
+
+  const performRefresh = useCallback(async () => {
     if (!activeAddress) return;
     setLoadingData(true);
     setIsRefreshing(true);
@@ -95,6 +118,7 @@ export default function AdminPage() {
     setFeeMessage(null);
     setAdminError(null);
     setAdminMessage(null);
+    let refreshOk = false;
     try {
       const [ver, cfg, st] = await Promise.all([
         getVersion(),
@@ -108,21 +132,31 @@ export default function AdminPage() {
         setFeeRoyaltyInput(cfg.royaltyFee.toString());
       }
       if (st) setStatsState(st);
+      if (ver && cfg && st) {
+        refreshOk = true;
+      }
     } catch (err) {
       console.error(err);
       setDataError(
         "Unable to fetch contract version/config on mainnet. Check NEXT_PUBLIC_RECEIPT_CONTRACT_ADDRESS and NEXT_PUBLIC_RECEIPT_CONTRACT_NAME."
       );
     } finally {
+      if (refreshOk) {
+        markSuccess();
+      }
       setLoadingData(false);
       setIsRefreshing(false);
     }
-  }, [activeAddress]);
+  }, [activeAddress, markSuccess]);
+
+  const handleRefresh = useCallback(() => {
+    runWithCooldown(performRefresh);
+  }, [performRefresh, runWithCooldown]);
 
   useEffect(() => {
     if (!activeAddress) return;
-    handleRefresh();
-  }, [activeAddress, handleRefresh]);
+    runWithCooldown(performRefresh);
+  }, [activeAddress, performRefresh, runWithCooldown]);
 
   const effectiveAdmin = useMemo(() => {
     if (version?.major === 2 && config?.admin) return config.admin;
@@ -202,16 +236,16 @@ export default function AdminPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.25em] text-neutral-600">
-              Admin · config + stats
+              Contract · config + stats
             </p>
             {!activeAddress && (
               <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
-                Connect to View Admin Info.
+                Connect to View Contract Info.
               </h1>
             )}
             {activeAddress && (
               <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
-                Your Admin Dashboard.
+                Your Contract Dashboard.
               </h1>
             )}
           </div>
@@ -225,7 +259,7 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={!activeAddress || loadingData}
+              disabled={!activeAddress || loadingData || isCooling}
               className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40">
               {isRefreshing || loadingData ? "Refreshing…" : "Refresh"}
             </button>
@@ -233,7 +267,7 @@ export default function AdminPage() {
         </div>
 
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
-          On-chain configuration and admin tools for the{" "}
+          On-chain configuration and contract tools for the{" "}
           <span className="font-bold">$MyReceipt</span> contract on{" "}
           <span className="font-bold">Stacks mainnet</span>.
         </p>
@@ -241,7 +275,7 @@ export default function AdminPage() {
 
       {!activeAddress && (
         <div className="rounded-md border border-dashed border-black bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
-          Connect your Stacks wallet in the navbar to see admin info.
+          Connect your Stacks wallet in the navbar to see contract info.
         </div>
       )}
 
@@ -287,52 +321,61 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {activeTab === "contract" && (
-            <ContractTab
-              version={version}
-              contractId={contractId}
-              loadingData={loadingData}
-              dataError={dataError}
-              config={config}
-              stats={stats}
-            />
-          )}
+          {isCooling ? (
+            <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
+              Cooling down for {Math.max(0, Math.ceil(remainingMs))} milliseconds
+              and when done will loading on-chain data...
+            </div>
+          ) : (
+            <>
+              {activeTab === "contract" && (
+                <ContractTab
+                  version={version}
+                  contractId={contractId}
+                  loadingData={loadingData}
+                  dataError={dataError}
+                  config={config}
+                  stats={stats}
+                />
+              )}
 
-          {activeTab === "status" && (
-            <StatusTab
-              loadingData={loadingData}
-              dataError={dataError}
-              version={version}
-              config={config}
-              stats={stats}
-            />
-          )}
+              {activeTab === "status" && (
+                <StatusTab
+                  loadingData={loadingData}
+                  dataError={dataError}
+                  version={version}
+                  config={config}
+                  stats={stats}
+                />
+              )}
 
-          {activeTab === "update" && (
-            <UpdateTab
-              loadingData={loadingData}
-              dataError={dataError}
-              version={version}
-              config={config}
-              stats={stats}
-              isAdmin={isAdmin}
-              address={activeAddress}
-              feeStampInput={feeStampInput}
-              feeRoyaltyInput={feeRoyaltyInput}
-              feeError={feeError}
-              feeMessage={feeMessage}
-              isUpdatingFees={isUpdatingFees}
-              newAdminInput={newAdminInput}
-              adminError={adminError}
-              adminMessage={adminMessage}
-              isUpdatingAdmin={isUpdatingAdmin}
-              onFeeStampChange={setFeeStampInput}
-              onFeeRoyaltyChange={setFeeRoyaltyInput}
-              onAdminChange={setNewAdminInput}
-              onSubmitFees={handleSubmitFees}
-              onSubmitAdmin={handleSubmitAdmin}
-              shorten={shorten}
-            />
+              {activeTab === "update" && (
+                <UpdateTab
+                  loadingData={loadingData}
+                  dataError={dataError}
+                  version={version}
+                  config={config}
+                  stats={stats}
+                  isAdmin={isAdmin}
+                  address={activeAddress}
+                  feeStampInput={feeStampInput}
+                  feeRoyaltyInput={feeRoyaltyInput}
+                  feeError={feeError}
+                  feeMessage={feeMessage}
+                  isUpdatingFees={isUpdatingFees}
+                  newAdminInput={newAdminInput}
+                  adminError={adminError}
+                  adminMessage={adminMessage}
+                  isUpdatingAdmin={isUpdatingAdmin}
+                  onFeeStampChange={setFeeStampInput}
+                  onFeeRoyaltyChange={setFeeRoyaltyInput}
+                  onAdminChange={setNewAdminInput}
+                  onSubmitFees={handleSubmitFees}
+                  onSubmitAdmin={handleSubmitAdmin}
+                  shorten={shorten}
+                />
+              )}
+            </>
           )}
         </div>
       )}
