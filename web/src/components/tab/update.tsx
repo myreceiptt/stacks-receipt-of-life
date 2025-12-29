@@ -86,7 +86,7 @@ export function UpdateTab({
         </p>
         <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
           Cooling down for {Math.max(0, Math.ceil(cooldownMs))} milliseconds and
-          when done will loading on-chain data...
+          then loading on-chain data...
         </div>
       </div>
     );

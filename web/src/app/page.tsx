@@ -467,7 +467,7 @@ export default function HomePage() {
               type="button"
               onClick={handleRefresh}
               disabled={!activeAddress || loadingData || isCooling}
-              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] disabled:opacity-40">
+              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-40">
               {isRefreshing || loadingData ? "Refreshing…" : "Refresh"}
             </button>
           </div>
@@ -502,8 +502,8 @@ export default function HomePage() {
               onClick={() => setActiveTab("stamp")}
               className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
                 activeTab === "stamp"
-                  ? "border-black bg-black text-white"
-                  : "border-black bg-white"
+                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                  : "border-black bg-white hover:bg-black hover:text-white"
               }`}>
               Stamp
             </button>
@@ -512,8 +512,8 @@ export default function HomePage() {
               onClick={() => setActiveTab("feed")}
               className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
                 activeTab === "feed"
-                  ? "border-black bg-black text-white"
-                  : "border-black bg-white"
+                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                  : "border-black bg-white hover:bg-black hover:text-white"
               }`}>
               Feed
             </button>

@@ -80,7 +80,7 @@ export function StampTab({
         </p>
         <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
           Cooling down for {Math.max(0, Math.ceil(cooldownMs))} milliseconds and
-          when done will loading on-chain data...
+          then loading on-chain data...
         </div>
       </div>
     );
@@ -142,8 +142,8 @@ export function StampTab({
                   onClick={() => onGiftChange(false)}
                   className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
                     !isGift
-                      ? "border-black bg-black text-white"
-                      : "border-black bg-white"
+                      ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                      : "border-black bg-white hover:bg-black hover:text-white"
                   }`}>
                   For me
                 </button>
@@ -152,8 +152,8 @@ export function StampTab({
                   onClick={() => onGiftChange(true)}
                   className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
                     isGift
-                      ? "border-black bg-black text-white"
-                      : "border-black bg-white"
+                      ? "border-black bg-black text-white hover:bg-white hover:text-black"
+                      : "border-black bg-white hover:bg-black hover:text-white"
                   }`}>
                   As a gift
                 </button>
