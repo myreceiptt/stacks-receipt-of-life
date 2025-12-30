@@ -3,7 +3,7 @@
 import { formatDateTime, shortenAddress } from "@/lib/formatters";
 import { buttonStyles } from "@/lib/button-styles";
 
-type FeedItem = {
+type LiveItem = {
   txid: string;
   label: string;
   sender: string;
@@ -12,8 +12,8 @@ type FeedItem = {
   receiptId?: number | null;
 };
 
-type FeedTabProps = {
-  feedItems: FeedItem[];
+type LiveTabProps = {
+  feedItems: LiveItem[];
   feedLoading: boolean;
   feedError: string | null;
   feedPage: number;
@@ -26,7 +26,7 @@ type FeedTabProps = {
   emptyMessage?: string;
 };
 
-export function FeedTab({
+export function LiveTab({
   feedItems,
   feedLoading,
   feedError,
@@ -36,9 +36,9 @@ export function FeedTab({
   onReceiptSelect,
   feedCooling,
   cooldownMs,
-  title = "Your Activity Feed",
-  emptyMessage = "No matching transactions found for this address.",
-}: FeedTabProps) {
+  title = "Live Receipt Feed",
+  emptyMessage = "No contract transactions found yet.",
+}: LiveTabProps) {
   if (feedCooling) {
     return (
       <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
@@ -85,8 +85,8 @@ export function FeedTab({
                   (() => {
                     const token = `RECEIPT #${item.receiptId}`;
                     if (!item.label.includes(token)) return item.label;
-                        const [before, ...rest] = item.label.split(token);
-                        const after = rest.join(token);
+                    const [before, ...rest] = item.label.split(token);
+                    const after = rest.join(token);
                     return (
                       <>
                         {before}
@@ -129,7 +129,9 @@ export function FeedTab({
                   target="_blank"
                   rel="noreferrer"
                   className="underline">
-                  <span className="font-mono">{shortenAddress(item.sender)}</span>
+                  <span className="font-mono">
+                    {shortenAddress(item.sender)}
+                  </span>
                 </a>{" "}
                 <span className="font-mono">(View on Explorer)</span>
               </div>

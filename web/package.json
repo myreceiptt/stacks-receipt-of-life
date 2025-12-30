@@ -12,6 +12,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^7.1.0",
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
+    "@fortawesome/react-fontawesome": "^3.1.1",
     "@hirosystems/chainhooks-client": "^1.0.0",
     "@reown/appkit": "^1.8.15",
     "@reown/appkit-adapter-bitcoin": "^1.8.15",

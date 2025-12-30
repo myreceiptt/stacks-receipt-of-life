@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonStyles } from "@/lib/button-styles";
 type ContractVersion = {
   major: number;
   minor: number;
@@ -183,7 +184,7 @@ export function StampTab({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-50">
+                className={buttonStyles.primary}>
                 {isSubmitting
                   ? "Stamping..."
                   : isGift
