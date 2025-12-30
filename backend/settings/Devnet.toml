@@ -1,0 +1,22 @@
+[network]
+name = "devnet"
+stacks_node_rpc_address = "http://localhost:20443"
+bitcoin_node_rpc_address = "http://localhost:18443"
+bitcoin_node_username = "devnet"
+bitcoin_node_password = "devnet"
+
+[accounts.deployer]
+mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+balance = 100_000_000_000_000
+
+[accounts.wallet_1]
+mnemonic = "legal winner thank year wave sausage worth useful legal winner thank yellow"
+balance = 100_000_000_000_000
+
+[accounts.wallet_2]
+mnemonic = "letter advice cage absurd amount doctor acoustic avoid letter advice cage above"
+balance = 100_000_000_000_000
+
+[accounts.wallet_3]
+mnemonic = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong"
+balance = 100_000_000_000_000
