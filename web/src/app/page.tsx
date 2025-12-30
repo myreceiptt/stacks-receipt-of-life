@@ -577,6 +577,8 @@ export default function HomePage() {
               onReceiptSelect={handleReceiptSelect}
               feedCooling={isCooling}
               cooldownMs={remainingMs}
+              title="Your Activity Feed"
+              emptyMessage="No matching transactions found for this address."
             />
           )}
           <ReceiptModal

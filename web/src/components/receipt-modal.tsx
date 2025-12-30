@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useWallet } from "@/hooks/use-wallet";
+import { useAppKit } from "@reown/appkit/react";
 import { renderReceiptImage } from "@/lib/receipt-canvas";
 import { formatDateTime } from "@/lib/formatters";
 import { buttonStyles } from "@/lib/button-styles";
@@ -15,6 +17,7 @@ type ReceiptModalProps = {
     createdAt: number;
   } | null;
   pfpSrc?: string | null;
+  locked?: boolean;
 };
 
 export function ReceiptModal({
@@ -22,7 +25,10 @@ export function ReceiptModal({
   onClose,
   receipt,
   pfpSrc,
+  locked = false,
 }: ReceiptModalProps) {
+  const { connect } = useWallet();
+  const { open } = useAppKit();
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
@@ -117,7 +123,9 @@ export function ReceiptModal({
                   <img
                     src={imageDataUrl}
                     alt={`Receipt ${receipt.id}`}
-                    className="h-full w-full object-cover"
+                    className={`h-full w-full object-cover ${
+                      locked ? "blur-md" : ""
+                    }`}
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center">
@@ -136,20 +144,39 @@ export function ReceiptModal({
           </div>
         </div>
         <div className="mt-4 flex flex-wrap justify-center gap-3">
-          <button
-            type="button"
-            onClick={handleCopyReceipt}
-            disabled={!imageDataUrl || isRendering || isCopying}
-            className={buttonStyles.primary}>
-            {isCopying ? "Copying..." : "Copy Receipt"}
-          </button>
-          <button
-            type="button"
-            onClick={handleDownloadReceipt}
-            disabled={!imageDataUrl || isRendering || isDownloading}
-            className={buttonStyles.primary}>
-            {isDownloading ? "Downloading..." : "Download Receipt"}
-          </button>
+          {locked ? (
+            <>
+              <button
+                type="button"
+                onClick={() => connect()}
+                className={buttonStyles.primary}>
+                Connect Stacks Wallet
+              </button>
+              <button
+                type="button"
+                onClick={() => void open()}
+                className={buttonStyles.primary}>
+                WalletConnect QR Code
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleCopyReceipt}
+                disabled={!imageDataUrl || isRendering || isCopying}
+                className={buttonStyles.primary}>
+                {isCopying ? "Copying..." : "Copy Receipt"}
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadReceipt}
+                disabled={!imageDataUrl || isRendering || isDownloading}
+                className={buttonStyles.primary}>
+                {isDownloading ? "Downloading..." : "Download Receipt"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -22,6 +22,8 @@ type FeedTabProps = {
   onReceiptSelect: (id: number) => void;
   feedCooling: boolean;
   cooldownMs: number;
+  title?: string;
+  emptyMessage?: string;
 };
 
 export function FeedTab({
@@ -34,12 +36,14 @@ export function FeedTab({
   onReceiptSelect,
   feedCooling,
   cooldownMs,
+  title = "Your Activity Feed",
+  emptyMessage = "No matching transactions found for this address.",
 }: FeedTabProps) {
   if (feedCooling) {
     return (
       <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
         <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
-          Your Activity Feed
+          {title}
         </p>
         <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
           Cooling down for {Math.max(0, Math.ceil(cooldownMs))} milliseconds and
@@ -51,7 +55,7 @@ export function FeedTab({
   return (
     <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
       <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
-        Your Activity Feed
+        {title}
       </p>
 
       {feedLoading && (
@@ -68,7 +72,7 @@ export function FeedTab({
 
       {!feedLoading && !feedError && feedItems.length === 0 && (
         <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-          No matching transactions found for this address.
+          {emptyMessage}
         </div>
       )}
 
