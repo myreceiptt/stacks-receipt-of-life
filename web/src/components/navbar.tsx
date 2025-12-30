@@ -35,17 +35,18 @@ export function Navbar() {
           {isConnected && (
             <>
               <Link
-                href="/live"
-                className={toggleButtonClass(
-                  isActive("/live"),
-                  "rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
-                )}>
-                Live
-              </Link>
-              <Link
                 href="/"
                 className={toggleButtonClass(
                   isActive("/"),
+                  "rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
+                )}>
+                Home
+              </Link>
+
+              <Link
+                href="/stamp"
+                className={toggleButtonClass(
+                  isActive("/stamp"),
                   "rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
                 )}>
                 Stamp
