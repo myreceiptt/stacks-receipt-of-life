@@ -481,7 +481,7 @@ export default function HomePage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-[0.25em] text-neutral-600">
-              Receipt of Life · v4.7.47
+              Receipt of Life · v7.4.74
             </p>
             <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
               Stamp Your Receipt on Stacks.
