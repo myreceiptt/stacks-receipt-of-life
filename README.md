@@ -268,32 +268,33 @@ This repo demonstrates:
 - A UI-friendly v2 contract with paging + global stats + fee safety
 
 ---
+
 ---
 
-## Maintenance by Prof. NOTA Evergreen Standard
+## `web/` Maintenance by Prof. NOTA Evergreen Standard
 
 This repo is intended to stay evergreen while remaining production-safe.
 
-### Runtime
+### Runtime (web/)
 
-- Node: **24.x** (see `.nvmrc` and `package.json#engines`)
+- Node: **24.x** (see `web/.nvmrc` and `web/package.json#engines`)
 
   - ~~example alternatives: 22.x / 20.x (adjust if platform requires)~~
 
-- Package manager:
+- Package manager (web/):
 
   - **NPM** (lockfile: `package-lock.json`)
   - ~~Yarn (lockfile: `yarn.lock`)~~
   - ~~PNPM (lockfile: `pnpm-lock.yaml`)~~
 
-- Deploy target:
+- Deploy target (web/):
 
   - **Vercel**
   - ~~Netlify~~
   - ~~Self-hosted / Docker~~
   - ~~Other platform (document explicitly)~~
 
-### Monthly Safe Updates (recommended)
+### Monthly Safe Updates for `web/` (recommended)
 
 1. Check what’s outdated:
 
@@ -318,7 +319,7 @@ This repo is intended to stay evergreen while remaining production-safe.
    - **Vercel auto-deploy from `main`**
    - ~~manual deploy according to platform workflow~~
 
-### Major Updates (quarterly / scheduled)
+### Major Updates for `web/` (quarterly / scheduled)
 
 Major upgrades (framework, runtime, or core tooling) must be done one at a time, with a dedicated PR and full testing.
 
@@ -330,27 +331,28 @@ Examples:
 - Package manager major version
 
 ---
+
 ---
 
-## Maintenance by Prof. NOTA Evergreen Standard
+## `backend/` Maintenance by Prof. NOTA Evergreen Standard
 
 This repo is a **Support/Test Workspace** (no deployable app). It must stay evergreen so tests/scripts remain reliable.
 
-### Runtime
+### Runtime (backend/)
 
-- Node: **24.x** (see `.nvmrc` and `package.json#engines`)
+- Node: **24.x** (see `backend/.nvmrc` and `backend/package.json#engines`)
 
   - ~~example alternatives: 22.x / 20.x (adjust if platform requires)~~
 
-- Package manager:
+- Package manager (backend/):
 
   - **NPM** (lockfile: `package-lock.json`)
   - ~~Yarn (lockfile: `yarn.lock`)~~
   - ~~PNPM (lockfile: `pnpm-lock.yaml`)~~
 
-- Deploy target: **None (tests/tooling only)**
+- Deploy target (backend/): **None (tests/tooling only)**
 
-### Monthly Safe Updates (recommended)
+### Monthly Safe Updates for `backend/` (recommended)
 
 1. Check what’s outdated:
 
@@ -377,7 +379,7 @@ This repo is a **Support/Test Workspace** (no deployable app). It must stay ever
 
    - Not applicable (no build/deploy step)
 
-### Major Updates (quarterly / scheduled)
+### Major Updates for `backend/` (quarterly / scheduled)
 
 Major upgrades (runtime/tooling) must be done one at a time, with a dedicated PR and full testing.
 
