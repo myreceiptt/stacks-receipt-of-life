@@ -19,6 +19,8 @@ const loadImage = (src: string) =>
     img.onerror = () => resolve(img);
   });
 
+import { shortenAddress } from "@/lib/formatters";
+
 const wrapText = (
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -128,7 +130,7 @@ export async function renderReceiptImage({
   ctx.font = "28px Menlo, ui-monospace, SFMono-Regular, monospace";
   const metaLineHeight = 28 * 1.5;
 
-  const creatorShort = `${creator.slice(0, 7)} ... ${creator.slice(-4)}`;
+  const creatorShort = shortenAddress(creator);
   const metaLines = [
     `RECEIPT #: ${receiptId}`,
     `Date: ${createdAtLabel}`,

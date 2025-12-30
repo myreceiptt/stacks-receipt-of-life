@@ -1,6 +1,9 @@
 "use client";
 
 import type { Receipt } from "@/lib/receipt-contract";
+import { formatDateTime } from "@/lib/formatters";
+import { buttonStyles } from "@/lib/button-styles";
+import { ExplorerLink } from "@/components/explorer-link";
 
 type CreatedTabProps = {
   createdReceipts: Receipt[];
@@ -61,7 +64,7 @@ export function CreatedTab({
         <>
           <ul className="list-disc space-y-3 pl-4 text-sm text-neutral-800">
             {createdReceipts.map((r) => {
-              const date = new Date(r.createdAt * 1000);
+              const dateLabel = formatDateTime(r.createdAt * 1000);
               return (
                 <li key={r.id} className="pl-1">
                   <div className="font-semibold">
@@ -73,37 +76,18 @@ export function CreatedTab({
                     </span>
                   </div>
                   <div className="mt-1 text-[11px] text-neutral-500">
-                    {date.toLocaleString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {dateLabel}
                   </div>
-                  <div className="mt-1 text-[11px] text-neutral-600">
-                    Owner:{" "}
-                    <a
-                      href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline">
-                      {r.owner.slice(0, 7)} ... {r.owner.slice(-4)}
-                    </a>{" "}
-                    <span className="font-mono">(View on Explorer)</span>
-                  </div>
-                  <div className="mt-1 text-[11px] text-neutral-600">
-                    Royalty to:{" "}
-                    <a
-                      href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline">
-                      {r.royaltyRecipient.slice(0, 7)} ...{" "}
-                      {r.royaltyRecipient.slice(-4)}
-                    </a>{" "}
-                    <span className="font-mono">(View on Explorer)</span>
-                  </div>
+                  <ExplorerLink
+                    label="Owner"
+                    href={`https://explorer.stacks.co/address/${r.owner}?chain=mainnet`}
+                    text={r.owner}
+                  />
+                  <ExplorerLink
+                    label="Royalty to"
+                    href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
+                    text={r.royaltyRecipient}
+                  />
                 </li>
               );
             })}
@@ -114,7 +98,7 @@ export function CreatedTab({
                 type="button"
                 onClick={onLoadMore}
                 disabled={createdLoadingMore}
-                className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                className={buttonStyles.action}>
                 {createdLoadingMore ? "Loading..." : "Load more"}
               </button>
             </div>

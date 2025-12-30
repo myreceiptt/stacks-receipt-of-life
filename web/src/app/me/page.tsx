@@ -8,6 +8,9 @@ import { ReceiptModal } from "@/components/receipt-modal";
 import { OwnedTab } from "@/components/tab/owned";
 import { CreatedTab } from "@/components/tab/created";
 import { RoyaltyTab } from "@/components/tab/royalty";
+import { CoolingBanner } from "@/components/cooling-banner";
+import { PageHeaderActions } from "@/components/page-header-actions";
+import { toggleButtonClass } from "@/lib/button-styles";
 import {
   getLastId,
   getOwnedReceiptsPaged,
@@ -555,20 +558,12 @@ export default function MePage() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            {activeAddress && (
-              <span className="rounded-full border border-black bg-white px-3 py-1 font-mono">
-                {activeAddress.slice(0, 8)}…{activeAddress.slice(-4)}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={!activeAddress || activeLoading || isCooling}
-              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
-              {activeRefreshing || activeLoading ? "Refreshing…" : "Refresh"}
-            </button>
-          </div>
+          <PageHeaderActions
+            address={activeAddress}
+            onRefresh={handleRefresh}
+            disabled={!activeAddress || activeLoading || isCooling}
+            isRefreshing={activeRefreshing || activeLoading}
+          />
         </div>
 
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
@@ -598,49 +593,43 @@ export default function MePage() {
             <button
               type="button"
               onClick={() => setActiveTab("owned")}
-              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-                activeTab === "owned"
-                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                  : "border-black bg-white hover:bg-black hover:text-white"
-              }`}>
+              className={toggleButtonClass(
+                activeTab === "owned",
+                "rounded-full border px-3 py-1 uppercase tracking-[0.18em]"
+              )}>
               Owned
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("created")}
-              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-                activeTab === "created"
-                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                  : "border-black bg-white hover:bg-black hover:text-white"
-              }`}>
+              className={toggleButtonClass(
+                activeTab === "created",
+                "rounded-full border px-3 py-1 uppercase tracking-[0.18em]"
+              )}>
               Created
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("royalty")}
-              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-                activeTab === "royalty"
-                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                  : "border-black bg-white hover:bg-black hover:text-white"
-              }`}>
+              className={toggleButtonClass(
+                activeTab === "royalty",
+                "rounded-full border px-3 py-1 uppercase tracking-[0.18em]"
+              )}>
               Royalty
             </button>
           </div>
 
           {isCooling ? (
-            <div className="space-y-4 rounded-xl border border-black bg-white p-4 sm:p-6">
-              <p className="text-xs uppercase tracking-[0.18em] text-neutral-600">
-                {activeTab === "owned"
+            <CoolingBanner
+              label={
+                activeTab === "owned"
                   ? "Receipts You Owned"
                   : activeTab === "created"
                   ? "Receipts You Created"
-                  : "Royalty Receipts"}
-              </p>
-              <div className="rounded-md border border-dashed border-neutral-400 bg-neutral-50 p-3 text-sm text-neutral-700">
-                Cooling down for {Math.max(0, Math.ceil(remainingMs))}{" "}
-                milliseconds and then loading on-chain data...
-              </div>
-            </div>
+                  : "Royalty Receipts"
+              }
+              remainingMs={remainingMs}
+            />
           ) : (
             <>
               {activeTab === "owned" && (

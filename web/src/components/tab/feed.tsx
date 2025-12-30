@@ -1,5 +1,8 @@
 "use client";
 
+import { formatDateTime, shortenAddress } from "@/lib/formatters";
+import { buttonStyles } from "@/lib/button-styles";
+
 type FeedItem = {
   txid: string;
   label: string;
@@ -78,7 +81,8 @@ export function FeedTab({
                   (() => {
                     const token = `RECEIPT #${item.receiptId}`;
                     if (!item.label.includes(token)) return item.label;
-                    const [before, after] = item.label.split(token);
+                        const [before, ...rest] = item.label.split(token);
+                        const after = rest.join(token);
                     return (
                       <>
                         {before}
@@ -98,13 +102,7 @@ export function FeedTab({
               </div>
               {item.timestamp && (
                 <div className="mt-1 text-[11px] text-neutral-500">
-                  {new Date(item.timestamp).toLocaleString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateTime(item.timestamp)}
                 </div>
               )}
               <div className="mt-1 text-[11px] text-neutral-600">
@@ -127,9 +125,7 @@ export function FeedTab({
                   target="_blank"
                   rel="noreferrer"
                   className="underline">
-                  <span className="font-mono">
-                    {item.sender.slice(0, 7)} ... {item.sender.slice(-4)}
-                  </span>
+                  <span className="font-mono">{shortenAddress(item.sender)}</span>
                 </a>{" "}
                 <span className="font-mono">(View on Explorer)</span>
               </div>
@@ -143,8 +139,7 @@ export function FeedTab({
                       rel="noreferrer"
                       className="underline">
                       <span className="font-mono">
-                        {item.recipient.slice(0, 7)} ...{" "}
-                        {item.recipient.slice(-4)}
+                        {shortenAddress(item.recipient)}
                       </span>
                     </a>{" "}
                     <span className="font-mono">(View on Explorer)</span>
@@ -164,7 +159,7 @@ export function FeedTab({
             type="button"
             onClick={() => onPageChange(feedPage - 1)}
             disabled={feedPage === 1}
-            className="rounded-full border border-black bg-white px-3 py-1 uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+            className={buttonStyles.action}>
             Prev
           </button>
           {Array.from({ length: totalFeedPages }, (_, idx) => idx + 1)
@@ -196,7 +191,7 @@ export function FeedTab({
             type="button"
             onClick={() => onPageChange(feedPage + 1)}
             disabled={totalFeedPages > 0 && feedPage >= totalFeedPages}
-            className="rounded-full border border-black bg-white px-3 py-1 uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+            className={buttonStyles.action}>
             Next
           </button>
         </div>

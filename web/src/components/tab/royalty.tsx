@@ -1,6 +1,9 @@
 "use client";
 
 import type { Receipt } from "@/lib/receipt-contract";
+import { formatDateTime } from "@/lib/formatters";
+import { buttonStyles } from "@/lib/button-styles";
+import { ExplorerLink } from "@/components/explorer-link";
 
 type RoyaltyTabProps = {
   royaltyReceipts: Receipt[];
@@ -75,7 +78,7 @@ export function RoyaltyTab({
         <>
           <ul className="list-disc space-y-3 pl-4 text-sm text-neutral-800">
             {royaltyReceipts.map((r) => {
-              const date = new Date(r.createdAt * 1000);
+              const dateLabel = formatDateTime(r.createdAt * 1000);
               return (
                 <li key={r.id} className="pl-1">
                   <div className="font-semibold">
@@ -87,37 +90,18 @@ export function RoyaltyTab({
                     </span>
                   </div>
                   <div className="mt-1 text-[11px] text-neutral-500">
-                    {date.toLocaleString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {dateLabel}
                   </div>
-                  <div className="mt-1 text-[11px] text-neutral-600">
-                    Creator:{" "}
-                    <a
-                      href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline">
-                      {r.creator.slice(0, 7)} ... {r.creator.slice(-4)}
-                    </a>{" "}
-                    <span className="font-mono">(View on Explorer)</span>
-                  </div>
-                  <div className="mt-1 text-[11px] text-neutral-600">
-                    Royalty to:{" "}
-                    <a
-                      href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline">
-                      {r.royaltyRecipient.slice(0, 7)} ...{" "}
-                      {r.royaltyRecipient.slice(-4)}
-                    </a>{" "}
-                    <span className="font-mono">(View on Explorer)</span>
-                  </div>
+                  <ExplorerLink
+                    label="Creator"
+                    href={`https://explorer.stacks.co/address/${r.creator}?chain=mainnet`}
+                    text={r.creator}
+                  />
+                  <ExplorerLink
+                    label="Royalty to"
+                    href={`https://explorer.stacks.co/address/${r.royaltyRecipient}?chain=mainnet`}
+                    text={r.royaltyRecipient}
+                  />
                   {activeAddress === r.creator && (
                     <>
                       <div className="mt-3 flex flex-col gap-1">
@@ -144,7 +128,7 @@ export function RoyaltyTab({
                         type="button"
                         onClick={() => onRoyaltyUpdate(r)}
                         disabled={!!royaltyUpdating[r.id]}
-                        className="mt-3 rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-50">
+                        className={`mt-3 ${buttonStyles.primary}`}>
                         {royaltyUpdating[r.id]
                           ? "Updating..."
                           : "Update royalty"}
@@ -171,7 +155,7 @@ export function RoyaltyTab({
                 type="button"
                 onClick={onLoadMore}
                 disabled={royaltyLoadingMore}
-                className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
+                className={buttonStyles.action}>
                 {royaltyLoadingMore ? "Loading..." : "Load more"}
               </button>
             </div>

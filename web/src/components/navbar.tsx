@@ -4,6 +4,7 @@ import Image from "next/image";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { useWallet } from "@/hooks/use-wallet";
 import { usePathname } from "next/navigation";
+import { toggleButtonClass } from "@/lib/button-styles";
 
 export function Navbar() {
   const { address } = useWallet();
@@ -35,31 +36,28 @@ export function Navbar() {
             <>
               <Link
                 href="/"
-                className={`rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] ${
-                  isActive("/")
-                    ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                    : "border-black bg-white hover:bg-black hover:text-white"
-                }`}>
+                className={toggleButtonClass(
+                  isActive("/"),
+                  "rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
+                )}>
                 Stamp
               </Link>
 
               <Link
                 href="/me"
-                className={`rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] ${
-                  isActive("/me")
-                    ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                    : "border-black bg-white hover:bg-black hover:text-white"
-                }`}>
+                className={toggleButtonClass(
+                  isActive("/me"),
+                  "rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
+                )}>
                 Receipts
               </Link>
 
               <Link
                 href="/contract"
-                className={`rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em] ${
-                  isActive("/contract")
-                    ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                    : "border-black bg-white hover:bg-black hover:text-white"
-                }`}>
+                className={toggleButtonClass(
+                  isActive("/contract"),
+                  "rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
+                )}>
                 Contract
               </Link>
             </>

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { renderReceiptImage } from "@/lib/receipt-canvas";
+import { formatDateTime } from "@/lib/formatters";
+import { buttonStyles } from "@/lib/button-styles";
 
 type ReceiptModalProps = {
   isOpen: boolean;
@@ -34,14 +36,7 @@ export function ReceiptModal({
     }
 
     let cancelled = false;
-    const createdAt = new Date(receipt.createdAt * 1000);
-    const createdAtLabel = createdAt.toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const createdAtLabel = formatDateTime(receipt.createdAt * 1000);
 
     const renderImage = async () => {
       setIsRendering(true);
@@ -145,14 +140,14 @@ export function ReceiptModal({
             type="button"
             onClick={handleCopyReceipt}
             disabled={!imageDataUrl || isRendering || isCopying}
-            className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
+            className={buttonStyles.primary}>
             {isCopying ? "Copying..." : "Copy Receipt"}
           </button>
           <button
             type="button"
             onClick={handleDownloadReceipt}
             disabled={!imageDataUrl || isRendering || isDownloading}
-            className="rounded-full border border-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] hover:bg-black hover:text-white disabled:opacity-60">
+            className={buttonStyles.primary}>
             {isDownloading ? "Downloading..." : "Download Receipt"}
           </button>
         </div>

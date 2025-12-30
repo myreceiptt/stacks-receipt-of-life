@@ -7,6 +7,8 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import { VersionTab } from "@/components/tab/version";
 import { StatusTab } from "@/components/tab/status";
 import { UpdateTab } from "@/components/tab/update";
+import { PageHeaderActions } from "@/components/page-header-actions";
+import { toggleButtonClass } from "@/lib/button-styles";
 import {
   getVersion,
   getConfig,
@@ -250,20 +252,12 @@ export default function ContractPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            {activeAddress && (
-              <span className="rounded-full border border-black bg-white px-3 py-1 font-mono">
-                {activeAddress.slice(0, 8)}…{activeAddress.slice(-4)}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={!activeAddress || loadingData || isCooling}
-              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
-              {isRefreshing || loadingData ? "Refreshing…" : "Refresh"}
-            </button>
-          </div>
+          <PageHeaderActions
+            address={activeAddress}
+            onRefresh={handleRefresh}
+            disabled={!activeAddress || loadingData || isCooling}
+            isRefreshing={isRefreshing || loadingData}
+          />
         </div>
 
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
@@ -292,31 +286,28 @@ export default function ContractPage() {
             <button
               type="button"
               onClick={() => setActiveTab("version")}
-              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-                activeTab === "version"
-                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                  : "border-black bg-white hover:bg-black hover:text-white"
-              }`}>
+              className={toggleButtonClass(
+                activeTab === "version",
+                "rounded-full border px-3 py-1 uppercase tracking-[0.18em]"
+              )}>
               Version
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("status")}
-              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-                activeTab === "status"
-                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                  : "border-black bg-white hover:bg-black hover:text-white"
-              }`}>
+              className={toggleButtonClass(
+                activeTab === "status",
+                "rounded-full border px-3 py-1 uppercase tracking-[0.18em]"
+              )}>
               Status
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("update")}
-              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-                activeTab === "update"
-                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                  : "border-black bg-white hover:bg-black hover:text-white"
-              }`}>
+              className={toggleButtonClass(
+                activeTab === "update",
+                "rounded-full border px-3 py-1 uppercase tracking-[0.18em]"
+              )}>
               Update
             </button>
           </div>

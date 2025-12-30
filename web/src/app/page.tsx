@@ -8,6 +8,8 @@ import { cvToJSON, hexToCV } from "@stacks/transactions";
 import { FeedTab } from "@/components/tab/feed";
 import { StampTab } from "@/components/tab/stamp";
 import { ReceiptModal } from "@/components/receipt-modal";
+import { PageHeaderActions } from "@/components/page-header-actions";
+import { toggleButtonClass } from "@/lib/button-styles";
 import {
   CONTRACT_ADDRESS,
   CONTRACT_NAME,
@@ -486,20 +488,12 @@ export default function HomePage() {
             </h1>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-[11px]">
-            {activeAddress && (
-              <span className="rounded-full border border-black bg-white px-3 py-1 font-mono">
-                {activeAddress.slice(0, 8)}…{activeAddress.slice(-4)}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={!activeAddress || loadingData || isCooling}
-              className="rounded-full border border-black bg-white px-3 py-1 text-[11px] uppercase tracking-[0.18em] hover:bg-black hover:text-white disabled:opacity-50">
-              {isRefreshing || loadingData ? "Refreshing…" : "Refresh"}
-            </button>
-          </div>
+          <PageHeaderActions
+            address={activeAddress}
+            onRefresh={handleRefresh}
+            disabled={!activeAddress || loadingData || isCooling}
+            isRefreshing={isRefreshing || loadingData}
+          />
         </div>
 
         <p className="max-w-xl text-sm leading-relaxed text-neutral-700">
@@ -529,21 +523,19 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setActiveTab("stamp")}
-              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-                activeTab === "stamp"
-                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                  : "border-black bg-white hover:bg-black hover:text-white"
-              }`}>
+              className={toggleButtonClass(
+                activeTab === "stamp",
+                "rounded-full border px-3 py-1 uppercase tracking-[0.18em]"
+              )}>
               Stamp
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("feed")}
-              className={`rounded-full border px-3 py-1 uppercase tracking-[0.18em] ${
-                activeTab === "feed"
-                  ? "border-black bg-black text-white hover:bg-white hover:text-black"
-                  : "border-black bg-white hover:bg-black hover:text-white"
-              }`}>
+              className={toggleButtonClass(
+                activeTab === "feed",
+                "rounded-full border px-3 py-1 uppercase tracking-[0.18em]"
+              )}>
               Feed
             </button>
           </div>
