@@ -479,10 +479,8 @@ export async function getReceiptsRange(
     Cl.uint(limit),
   ]);
 
-  if (!isRecord(raw)) return [];
-
-  const list = raw["value"];
-  if (!Array.isArray(list)) return [];
+  const list = extractOkList(raw);
+  if (!list) return [];
 
   const receipts: Receipt[] = [];
   for (const item of list) {
