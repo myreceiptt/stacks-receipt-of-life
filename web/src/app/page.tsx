@@ -14,7 +14,9 @@ import { shortenAddress } from "@/lib/formatters";
 import {
   CONTRACT_ADDRESS,
   CONTRACT_NAME,
+  getReceiptsRange,
   getReceipt,
+  getStats,
   type Receipt,
 } from "@/lib/receipt-contract";
 
@@ -42,9 +44,17 @@ export default function LivePage() {
   const [feedTotal, setFeedTotal] = useState(0);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [activeTab, setActiveTab] = useState<"live" | "list">("live");
+  const [listItems, setListItems] = useState<Receipt[]>([]);
+  const [listLoading, setListLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+  const [listPage, setListPage] = useState(1);
+  const [listTotal, setListTotal] = useState(0);
+  const [listInitialized, setListInitialized] = useState(false);
 
   const feedPageSize = 11;
   const feedApiPageSize = 50;
+  const listPageSize = 10;
+  const listBatchLimit = 10;
 
   useEffect(() => {
     if (!isCooling && pendingActionRef.current) {
@@ -237,7 +247,50 @@ export default function LivePage() {
     return { items, total: matches.length };
   }, []);
 
-  const handleRefresh = useCallback(() => {
+  const fetchListWindow = useCallback(
+    async (startId: number, limit: number) => {
+      const receipts: Receipt[] = [];
+      let remaining = limit;
+      let cursor = startId;
+
+      while (remaining > 0) {
+        const batch = Math.min(remaining, listBatchLimit);
+        const batchItems = await getReceiptsRange(cursor, batch);
+        receipts.push(...batchItems);
+        if (batchItems.length < batch) break;
+        remaining -= batchItems.length;
+        cursor += batchItems.length;
+      }
+
+      return receipts;
+    },
+    [listBatchLimit]
+  );
+
+  const fetchList = useCallback(
+    async (page = 1) => {
+      const stats = await getStats();
+      if (!stats) {
+        throw new Error("Unable to fetch on-chain receipt stats.");
+      }
+
+      const total = Math.max(0, stats.lastId);
+      if (!total) {
+        return { items: [], total, page: 1 };
+      }
+
+      const totalPages = Math.max(1, Math.ceil(total / listPageSize));
+      const safePage = Math.min(Math.max(page, 1), totalPages);
+      const startId = Math.max(1, total - listPageSize * safePage + 1);
+      const items = await fetchListWindow(startId, listPageSize);
+      const sorted = items.sort((a, b) => b.id - a.id);
+
+      return { items: sorted, total, page: safePage };
+    },
+    [fetchListWindow, listPageSize]
+  );
+
+  const handleFeedRefresh = useCallback(() => {
     runWithCooldown(async () => {
       setFeedLoading(true);
       setFeedError(null);
@@ -258,11 +311,47 @@ export default function LivePage() {
     });
   }, [fetchFeed, markSuccess, runWithCooldown]);
 
+  const handleListRefresh = useCallback(() => {
+    runWithCooldown(async () => {
+      setListLoading(true);
+      setListError(null);
+      setIsRefreshing(true);
+      try {
+        const { items, total, page } = await fetchList(1);
+        setListItems(items);
+        setListTotal(total);
+        setListPage(page);
+        setListInitialized(true);
+        markSuccess();
+      } catch (err) {
+        console.error(err);
+        setListError("Unable to load the receipt gallery. Please try again.");
+      } finally {
+        setListLoading(false);
+        setIsRefreshing(false);
+      }
+    });
+  }, [fetchList, markSuccess, runWithCooldown]);
+
+  const handleRefresh = useCallback(() => {
+    if (activeTab === "list") {
+      handleListRefresh();
+    } else {
+      handleFeedRefresh();
+    }
+  }, [activeTab, handleFeedRefresh, handleListRefresh]);
+
   useEffect(() => {
-    handleRefresh();
-  }, [handleRefresh]);
+    handleFeedRefresh();
+  }, [handleFeedRefresh]);
+
+  useEffect(() => {
+    if (activeTab !== "list" || listInitialized) return;
+    handleListRefresh();
+  }, [activeTab, handleListRefresh, listInitialized]);
 
   const totalFeedPages = Math.max(1, Math.ceil(feedTotal / feedPageSize));
+  const totalListPages = Math.max(1, Math.ceil(listTotal / listPageSize));
 
   const handleFeedPageChange = useCallback(
     (page: number) => {
@@ -284,6 +373,28 @@ export default function LivePage() {
       });
     },
     [fetchFeed, markSuccess, runWithCooldown, totalFeedPages]
+  );
+
+  const handleListPageChange = useCallback(
+    (page: number) => {
+      if (page < 1 || page > totalListPages) return;
+      runWithCooldown(async () => {
+        setListLoading(true);
+        setListError(null);
+        try {
+          const { items, page: safePage } = await fetchList(page);
+          setListItems(items);
+          setListPage(safePage);
+          markSuccess();
+        } catch (err) {
+          console.error(err);
+          setListError("Unable to load the receipt gallery. Please try again.");
+        } finally {
+          setListLoading(false);
+        }
+      });
+    },
+    [fetchList, markSuccess, runWithCooldown, totalListPages]
   );
 
   const handleReceiptSelect = useCallback(
@@ -316,8 +427,14 @@ export default function LivePage() {
           <PageHeaderActions
             address={activeAddress}
             onRefresh={handleRefresh}
-            disabled={isCooling || isRefreshing || feedLoading}
-            isRefreshing={isRefreshing || feedLoading}
+            disabled={
+              isCooling ||
+              isRefreshing ||
+              (activeTab === "live" ? feedLoading : listLoading)
+            }
+            isRefreshing={
+              isRefreshing || (activeTab === "live" ? feedLoading : listLoading)
+            }
           />
         </div>
 
@@ -370,7 +487,19 @@ export default function LivePage() {
             emptyMessage="No contract transactions found yet."
           />
         ) : (
-          <ListTab />
+          <ListTab
+            listItems={listItems}
+            listLoading={listLoading}
+            listError={listError}
+            listPage={listPage}
+            totalListPages={totalListPages}
+            onPageChange={handleListPageChange}
+            onReceiptSelect={(receipt) => setSelectedReceipt(receipt)}
+            listCooling={isCooling}
+            cooldownMs={remainingMs}
+            title="Receipt Gallery"
+            emptyMessage="No receipts found yet."
+          />
         )}
         <ReceiptModal
           isOpen={!!selectedReceipt}
