@@ -18,6 +18,11 @@ No token, no bonding curve, no order book — just **text + tiny cash flows**.
 
 ---
 
+## Evergreen Notes (2025-12)
+
+- `@types/node` is intentionally pinned at 24.x (Node 25 deferred).
+- `npm audit` in `web/` reports high severity issues in transitive deps (`axios`, `valibot`) via `@reown/appkit-adapter-bitcoin` with no upstream fix available.
+
 ## Contract Versions (Mainnet)
 
 - **Active (v2)**: `SP29ECHHQ6F9344SGGGRGDPTPFPTXA3GHXK28KCWH.receipt-of-life-v2`
@@ -247,8 +252,9 @@ npm run dev
 Open:
 
 - `http://localhost:3000`
+- `http://localhost:3000/stamp`
 - `http://localhost:3000/me`
-- `http://localhost:3000/admin`
+- `http://localhost:3000/contract`
 
 ---
 
@@ -262,52 +268,61 @@ This repo demonstrates:
 - A UI-friendly v2 contract with paging + global stats + fee safety
 
 ---
-
 ---
 
 ## Maintenance by Prof. NOTA Evergreen Standard
 
-### Web App (Class A)
-
 This repo is intended to stay evergreen while remaining production-safe.
 
-### Runtime - A
+### Runtime
 
 - Node: **24.x** (see `.nvmrc` and `package.json#engines`)
+
   - ~~example alternatives: 22.x / 20.x (adjust if platform requires)~~
+
 - Package manager:
+
   - **NPM** (lockfile: `package-lock.json`)
   - ~~Yarn (lockfile: `yarn.lock`)~~
   - ~~PNPM (lockfile: `pnpm-lock.yaml`)~~
+
 - Deploy target:
+
   - **Vercel**
   - ~~Netlify~~
   - ~~Self-hosted / Docker~~
   - ~~Other platform (document explicitly)~~
 
-### Monthly Safe Updates (recommended) - A
+### Monthly Safe Updates (recommended)
 
 1. Check what’s outdated:
+
    - `npm outdated`
    - ~~yarn outdated~~
    - ~~pnpm outdated~~
+
 2. Upgrade safe (patch/minor) versions:
+
    - `npm update`
    - or upgrade specific packages shown as non-major
+
 3. Verify:
+
    - `npm audit --audit-level=moderate`
    - ~~yarn audit --level moderate~~
    - ~~pnpm audit~~
    - `npm run build`
+
 4. Deploy:
+
    - **Vercel auto-deploy from `main`**
    - ~~manual deploy according to platform workflow~~
 
-### Major Updates (quarterly / scheduled) - A
+### Major Updates (quarterly / scheduled)
 
 Major upgrades (framework, runtime, or core tooling) must be done one at a time, with a dedicated PR and full testing.
 
-Examples of major upgrades:
+Examples:
 
 - Node major version
 - Next.js / React major version
@@ -315,40 +330,54 @@ Examples of major upgrades:
 - Package manager major version
 
 ---
+---
 
-### Backend Tests (Class D)
+## Maintenance by Prof. NOTA Evergreen Standard
 
 This repo is a **Support/Test Workspace** (no deployable app). It must stay evergreen so tests/scripts remain reliable.
 
-### Runtime - D
+### Runtime
 
 - Node: **24.x** (see `.nvmrc` and `package.json#engines`)
+
   - ~~example alternatives: 22.x / 20.x (adjust if platform requires)~~
+
 - Package manager:
+
   - **NPM** (lockfile: `package-lock.json`)
   - ~~Yarn (lockfile: `yarn.lock`)~~
   - ~~PNPM (lockfile: `pnpm-lock.yaml`)~~
+
 - Deploy target: **None (tests/tooling only)**
 
-### Monthly Safe Updates (recommended) - D
+### Monthly Safe Updates (recommended)
 
 1. Check what’s outdated:
+
    - `npm outdated`
    - ~~yarn outdated~~
    - ~~pnpm outdated~~
+
 2. Upgrade safe (patch/minor) versions:
+
    - `npm update`
    - or upgrade specific packages shown as non-major
+
 3. Verify:
+
    - `npm audit --audit-level=moderate`
    - ~~yarn audit~~
    - ~~pnpm audit~~
+
 4. Tests:
+
    - `npm test`
+
 5. Build/deploy:
+
    - Not applicable (no build/deploy step)
 
-### Major Updates (quarterly / scheduled) - D
+### Major Updates (quarterly / scheduled)
 
 Major upgrades (runtime/tooling) must be done one at a time, with a dedicated PR and full testing.
 

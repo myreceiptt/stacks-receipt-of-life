@@ -37,7 +37,7 @@ coverage/
 
 # Clarinet / Stacks settings that may contain mnemonics or private keys
 backend/settings/*.toml
-backend/settings/Devnet.toml
+!backend/settings/Devnet.toml
 backend/settings/Testnet.toml
 backend/settings/Mainnet.toml
 codex-prompt.md
