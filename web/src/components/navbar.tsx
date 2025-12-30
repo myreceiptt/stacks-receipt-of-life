@@ -1,6 +1,13 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faChartLine,
+  faStamp,
+  faReceipt,
+  faFileContract,
+} from "@fortawesome/free-solid-svg-icons";
 import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { useWallet } from "@/hooks/use-wallet";
 import { usePathname } from "next/navigation";
@@ -36,38 +43,46 @@ export function Navbar() {
             <>
               <Link
                 href="/"
+                aria-label="Home"
+                title="Home"
                 className={toggleButtonClass(
                   isActive("/"),
                   "rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
                 )}>
-                Home
+                <FontAwesomeIcon icon={faChartLine} />
               </Link>
 
               <Link
                 href="/stamp"
+                aria-label="Stamp"
+                title="Stamp"
                 className={toggleButtonClass(
                   isActive("/stamp"),
                   "rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
                 )}>
-                Stamp
+                <FontAwesomeIcon icon={faStamp} />
               </Link>
 
               <Link
                 href="/me"
+                aria-label="Receipts"
+                title="Receipts"
                 className={toggleButtonClass(
                   isActive("/me"),
                   "rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
                 )}>
-                Receipts
+                <FontAwesomeIcon icon={faReceipt} />
               </Link>
 
               <Link
                 href="/contract"
+                aria-label="Contract"
+                title="Contract"
                 className={toggleButtonClass(
                   isActive("/contract"),
                   "rounded-full border px-4 py-1 text-xs font-medium uppercase tracking-[0.18em]"
                 )}>
-                Contract
+                <FontAwesomeIcon icon={faFileContract} />
               </Link>
             </>
           )}
