@@ -40,4 +40,9 @@ backend/settings/*.toml
 !backend/settings/Devnet.toml
 backend/settings/Testnet.toml
 backend/settings/Mainnet.toml
+backend/receipt/.key.local
+backend/receipt/.progress.json
+backend/receipt/.stamp.pid
+backend/receipt/content.json
+backend/receipt/recipients.json
 codex-prompt.md
