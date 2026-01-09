@@ -16,10 +16,10 @@
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/react-fontawesome": "^3.1.1",
     "@hirosystems/chainhooks-client": "^1.0.0",
-    "@reown/appkit": "^1.8.15",
-    "@reown/appkit-adapter-bitcoin": "^1.8.15",
-    "@reown/appkit-common": "^1.8.15",
-    "@reown/appkit-universal-connector": "^1.8.15",
+    "@reown/appkit": "^1.8.16",
+    "@reown/appkit-adapter-bitcoin": "^1.8.16",
+    "@reown/appkit-common": "^1.8.16",
+    "@reown/appkit-universal-connector": "^1.8.16",
     "@stacks/connect": "^8.2.3",
     "@stacks/network": "^7.2.0",
     "@stacks/transactions": "^7.3.0",
@@ -27,7 +27,7 @@
     "next": "^16.0.10",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "undici": "^7.16.0"
+    "undici": "^7.18.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
