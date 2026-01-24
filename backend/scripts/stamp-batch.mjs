@@ -121,7 +121,7 @@ const normalizeContentItems = (payload) => {
 const buildSenderPool = async (mnemonics, fallbackKeys) => {
   const keys = [...fallbackKeys];
   for (const mnemonic of mnemonics) {
-    for (let index = 0; index <= 2; index += 1) {
+    for (let index = 0; index <= 3; index += 1) {
       keys.push(await deriveKeyFromMnemonic(mnemonic, index));
     }
   }
