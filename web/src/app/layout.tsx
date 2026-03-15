@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   title: "Stacks Receipt of Life",
   description:
     "Stamp your Receipt — a Receipt of Life — on Stacks with Clarity 4.",
+  other: {
+    "talentapp:project_verification":
+      "3a6336008dfd8b5510d66f5cbb6e9dd00be025bfa9774a77478bba7a3b0c1cd99f81a356c31c2d89d7e9d84ae4a7e2bd0c71c00dba2b255fd8d51a9e864bfb23",
+  },
 };
 
 export default function RootLayout({
